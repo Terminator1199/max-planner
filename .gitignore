@@ -1,0 +1,11 @@
+node_modules/
+dist/
+coverage/
+.DS_Store
+*.log
+.env
+.env.*
+
+# Raw exports pasted during development may hold real player tags.
+# Only anonymised files under fixtures/ are committed.
+exports-local/
