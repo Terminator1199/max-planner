@@ -1,0 +1,232 @@
+{
+  "version": "sample-1",
+  "generatedAt": "2026-11-19T00:00:00Z",
+  "synthetic": true,
+  "sources": {
+    "note": "Hand-made test data. Ids, names, costs and times are invented and do not match the game."
+  },
+  "entities": [
+    {
+      "id": 9000001,
+      "name": "Town Hall",
+      "category": "other",
+      "lane": "builder",
+      "village": "home",
+      "role": "townHall",
+      "levels": [
+        { "level": 1, "cost": 0, "resource": "gold", "seconds": 0, "townHall": 1 },
+        { "level": 2, "cost": 1000, "resource": "gold", "seconds": 14400, "townHall": 2 },
+        { "level": 3, "cost": 4000, "resource": "gold", "seconds": 43200, "townHall": 3 }
+      ]
+    },
+    {
+      "id": 9000002,
+      "name": "Builder's Hut",
+      "category": "other",
+      "lane": "builder",
+      "village": "home",
+      "role": "builderHut",
+      "levels": [
+        { "level": 1, "cost": 0, "resource": "gold", "seconds": 0, "townHall": 1 },
+        { "level": 2, "cost": 5000, "resource": "gold", "seconds": 7200, "townHall": 3 }
+      ]
+    },
+    {
+      "id": 9000003,
+      "name": "Gold Storage",
+      "category": "storage",
+      "lane": "builder",
+      "village": "home",
+      "levels": [
+        { "level": 1, "cost": 300, "resource": "elixir", "seconds": 60, "townHall": 1 },
+        { "level": 2, "cost": 750, "resource": "elixir", "seconds": 1800, "townHall": 2 },
+        { "level": 3, "cost": 1500, "resource": "elixir", "seconds": 3600, "townHall": 3 }
+      ]
+    },
+    {
+      "id": 9000004,
+      "name": "Elixir Storage",
+      "category": "storage",
+      "lane": "builder",
+      "village": "home",
+      "levels": [
+        { "level": 1, "cost": 300, "resource": "gold", "seconds": 60, "townHall": 1 },
+        { "level": 2, "cost": 750, "resource": "gold", "seconds": 1800, "townHall": 2 },
+        { "level": 3, "cost": 1500, "resource": "gold", "seconds": 3600, "townHall": 3 }
+      ]
+    },
+    {
+      "id": 9000005,
+      "name": "Laboratory",
+      "category": "army",
+      "lane": "builder",
+      "village": "home",
+      "role": "laboratory",
+      "levels": [
+        { "level": 1, "cost": 500, "resource": "elixir", "seconds": 60, "townHall": 2 },
+        { "level": 2, "cost": 5000, "resource": "elixir", "seconds": 7200, "townHall": 3 }
+      ]
+    },
+    {
+      "id": 9000010,
+      "name": "Cannon",
+      "category": "defense",
+      "lane": "builder",
+      "village": "home",
+      "levels": [
+        { "level": 1, "cost": 250, "resource": "gold", "seconds": 60, "townHall": 1 },
+        { "level": 2, "cost": 1000, "resource": "gold", "seconds": 3600, "townHall": 1 },
+        { "level": 3, "cost": 4000, "resource": "gold", "seconds": 7200, "townHall": 2 },
+        { "level": 4, "cost": 8000, "resource": "gold", "seconds": 14400, "townHall": 3 }
+      ]
+    },
+    {
+      "id": 9000011,
+      "name": "Archer Tower",
+      "category": "defense",
+      "lane": "builder",
+      "village": "home",
+      "levels": [
+        { "level": 1, "cost": 1000, "resource": "gold", "seconds": 900, "townHall": 2 },
+        { "level": 2, "cost": 2000, "resource": "gold", "seconds": 3600, "townHall": 2 },
+        { "level": 3, "cost": 5000, "resource": "gold", "seconds": 10800, "townHall": 3 }
+      ]
+    },
+    {
+      "id": 9000012,
+      "name": "Bomb",
+      "category": "trap",
+      "lane": "builder",
+      "village": "home",
+      "levels": [
+        { "level": 1, "cost": 400, "resource": "gold", "seconds": 0, "townHall": 2 },
+        { "level": 2, "cost": 1000, "resource": "gold", "seconds": 900, "townHall": 3 }
+      ]
+    },
+    {
+      "id": 9000020,
+      "name": "Army Camp",
+      "category": "army",
+      "lane": "builder",
+      "village": "home",
+      "levels": [
+        { "level": 1, "cost": 200, "resource": "elixir", "seconds": 60, "townHall": 1 },
+        { "level": 2, "cost": 2000, "resource": "elixir", "seconds": 3600, "townHall": 2 }
+      ]
+    },
+    {
+      "id": 9000030,
+      "name": "Barbarian",
+      "category": "troop",
+      "lane": "lab",
+      "village": "home",
+      "levels": [
+        { "level": 1, "cost": 0, "resource": "elixir", "seconds": 0, "townHall": 1 },
+        { "level": 2, "cost": 5000, "resource": "elixir", "seconds": 7200, "townHall": 2 },
+        { "level": 3, "cost": 10000, "resource": "elixir", "seconds": 14400, "townHall": 3 }
+      ],
+      "requires": [
+        { "entityId": 9000005, "level": 1, "forLevel": 2 },
+        { "entityId": 9000005, "level": 2, "forLevel": 3 }
+      ]
+    },
+    {
+      "id": 9000031,
+      "name": "Lightning Spell",
+      "category": "spell",
+      "lane": "lab",
+      "village": "home",
+      "levels": [
+        { "level": 1, "cost": 0, "resource": "elixir", "seconds": 0, "townHall": 3 },
+        { "level": 2, "cost": 15000, "resource": "elixir", "seconds": 21600, "townHall": 3 }
+      ],
+      "requires": [{ "entityId": 9000005, "level": 2, "forLevel": 2 }]
+    },
+    {
+      "id": 9000040,
+      "name": "Barbarian King",
+      "category": "hero",
+      "lane": "builder",
+      "village": "home",
+      "levels": [
+        { "level": 1, "cost": 5000, "resource": "elixir", "seconds": 0, "townHall": 3 },
+        { "level": 2, "cost": 6000, "resource": "elixir", "seconds": 14400, "townHall": 3 },
+        { "level": 3, "cost": 7000, "resource": "elixir", "seconds": 28800, "townHall": 3 }
+      ]
+    },
+    {
+      "id": 9000050,
+      "name": "Wall",
+      "category": "wall",
+      "lane": null,
+      "village": "home",
+      "levels": [
+        { "level": 1, "cost": 50, "resource": "gold", "seconds": 0, "townHall": 1 },
+        { "level": 2, "cost": 1000, "resource": "gold", "seconds": 0, "townHall": 2 },
+        { "level": 3, "cost": 5000, "resource": "gold", "seconds": 0, "townHall": 3 }
+      ]
+    }
+  ],
+  "townHalls": [
+    {
+      "level": 1,
+      "counts": {
+        "9000001": 1,
+        "9000002": 2,
+        "9000003": 1,
+        "9000004": 1,
+        "9000010": 2,
+        "9000020": 1,
+        "9000030": 1,
+        "9000050": 10
+      },
+      "gate": [{ "entityId": 9000010, "level": 2 }]
+    },
+    {
+      "level": 2,
+      "counts": {
+        "9000001": 1,
+        "9000002": 2,
+        "9000003": 2,
+        "9000004": 2,
+        "9000005": 1,
+        "9000010": 2,
+        "9000011": 1,
+        "9000012": 2,
+        "9000020": 2,
+        "9000030": 1,
+        "9000050": 20
+      },
+      "gate": [
+        { "entityId": 9000005, "level": 1 },
+        { "entityId": 9000011, "level": 2 }
+      ]
+    },
+    {
+      "level": 3,
+      "counts": {
+        "9000001": 1,
+        "9000002": 3,
+        "9000003": 2,
+        "9000004": 2,
+        "9000005": 1,
+        "9000010": 2,
+        "9000011": 2,
+        "9000012": 2,
+        "9000020": 2,
+        "9000030": 1,
+        "9000031": 1,
+        "9000040": 1,
+        "9000050": 30
+      }
+    }
+  ],
+  "storage": [
+    { "entityId": 9000003, "level": 1, "resource": "gold", "capacity": 1500 },
+    { "entityId": 9000003, "level": 2, "resource": "gold", "capacity": 6000 },
+    { "entityId": 9000003, "level": 3, "resource": "gold", "capacity": 20000 },
+    { "entityId": 9000004, "level": 1, "resource": "elixir", "capacity": 1500 },
+    { "entityId": 9000004, "level": 2, "resource": "elixir", "capacity": 6000 },
+    { "entityId": 9000004, "level": 3, "resource": "elixir", "capacity": 20000 }
+  ]
+}
