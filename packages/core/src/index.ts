@@ -11,3 +11,14 @@ export {
   type WarningCode,
 } from "./parser/parse.ts";
 export { SECTIONS, ROW_FIELDS, type SectionInfo, type SectionUse } from "./parser/sections.ts";
+export {
+  remainingWork,
+  stepId,
+  CycleError,
+  type Bottleneck,
+  type LowerBound,
+  type RemainingWork,
+  type Step,
+  type Totals,
+  type Unplannable,
+} from "./calc/remaining.ts";
