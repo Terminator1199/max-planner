@@ -1,0 +1,26 @@
+{
+  "tag": "#FIXTURE01",
+  "timestamp": 1795000000,
+  "buildings": [
+    { "data": 9000001, "lvl": 2 },
+    { "data": 9000002, "lvl": 1, "cnt": 2 },
+    { "data": 9000003, "lvl": 2, "cnt": 1 },
+    { "data": 9000003, "lvl": 1, "timer": 600 },
+    { "data": 9000004, "lvl": 2, "cnt": 2 },
+    { "data": 9000005, "lvl": 1 },
+    { "data": 9000010, "lvl": 3, "cnt": 1, "extra_field": 1 },
+    { "data": 9000010, "lvl": 2, "timer": 3000 },
+    { "data": 9000011, "lvl": 1 },
+    { "data": 9000020, "lvl": 2, "cnt": 1 },
+    { "data": 9000020, "lvl": 1, "cnt": 1 },
+    { "data": 9000050, "lvl": 2, "cnt": 12 },
+    { "data": 9000050, "lvl": 1, "cnt": 8 },
+    { "data": 8000001, "lvl": 3 }
+  ],
+  "traps": [{ "data": 9000012, "lvl": 1 }],
+  "units": [{ "data": 9000030, "lvl": 1, "timer": 5000 }],
+  "helpers": [{ "data": 93000000, "lvl": 2, "helper_cooldown": 3600 }],
+  "buildings2": [{ "data": 1, "lvl": 1 }],
+  "decos": [{ "data": 9999999, "lvl": 1, "cnt": 3 }],
+  "mystery_section": [{ "data": 1, "lvl": 1 }]
+}
