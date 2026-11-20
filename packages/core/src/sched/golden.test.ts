@@ -8,9 +8,11 @@ import assert from "node:assert/strict";
 import { readFileSync, writeFileSync } from "node:fs";
 import { test } from "node:test";
 import seasons from "@max-planner/gamedata/files/seasons.json" with { type: "json" };
+import { arrivals } from "../boost/inventory.ts";
 import { remainingWork } from "../calc/remaining.ts";
+import { expandEvents } from "../events/windows.ts";
 import { parseExport } from "../parser/parse.ts";
-import { T0, readFixture, sampleGameData } from "../test-support.ts";
+import { T0, gameEvents, magicItems, readFixture, sampleGameData } from "../test-support.ts";
 import { goldPassDiscount } from "../time/goldpass.ts";
 import { OnlineCalendar } from "../time/online.ts";
 import { searchPlan, type SearchOptions } from "./search.ts";
@@ -60,6 +62,45 @@ function cases(): [string, () => ReturnType<typeof searchPlan>][] {
     "synthetic-th2/balanced/th3/offline-goldpass",
     () => searchPlan(work, village, gd, options),
   ]);
+
+  // Items and events: a half-price day starting 12 h in, the league switched on, potions,
+  // a book and a hammer in hand, with low thresholds so they act on this short plan.
+  const from = village.exportedAt;
+  const sale = {
+    id: "golden-sale",
+    name: "Golden sale",
+    status: "confirmed" as const,
+    start: new Date((from + 12 * 3600) * 1000).toISOString(),
+    end: new Date((from + 36 * 3600) * 1000).toISOString(),
+    effects: [{ kind: "discount" as const, timePct: 50, costPct: 50, villages: ["home" as const] }],
+    source: "test",
+  };
+  const items: SearchOptions = {
+    seed: 1,
+    events: expandEvents([...gameEvents(), sale], from, from + 60 * 86_400, [
+      "golden-sale",
+      "clan-war-league",
+    ]),
+    boosters: {
+      items: magicItems(),
+      arrivals: arrivals(
+        {
+          stock: {
+            "builder-potion": 2,
+            "research-potion": 1,
+            "book-of-building": 1,
+            "hammer-of-heroes": 1,
+          },
+          perMonth: { "builder-potion": 2 },
+        },
+        1,
+        from,
+        from + 60 * 86_400,
+      ),
+      rules: { bookMinDays: 0.25, hammerMinDays: 0.25 },
+    },
+  };
+  out.push(["synthetic-th2/balanced/th3/items-events", () => searchPlan(work, village, gd, items)]);
   return out;
 }
 

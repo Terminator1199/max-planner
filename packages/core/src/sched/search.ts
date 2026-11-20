@@ -161,3 +161,27 @@ export function searchPlan(
 export function planHash(plan: Plan): string {
   return sha256(JSON.stringify(plan.steps.map((p) => [p.id, p.worker, p.start, p.end])));
 }
+
+export interface ItemSavings {
+  withItems: SearchResult;
+  withoutItems: SearchResult;
+  /** How much sooner the plan finishes with items; what the booster page shows. */
+  savedSeconds: number;
+}
+
+/** Every plan runs twice, with items and without, so the page can show both dates. */
+export function searchWithItems(
+  work: RemainingWork,
+  village: Village,
+  gd: GameData,
+  options: SearchOptions = {},
+): ItemSavings {
+  const { boosters, ...rest } = options;
+  const withoutItems = searchPlan(work, village, gd, rest);
+  const withItems = boosters ? searchPlan(work, village, gd, options) : withoutItems;
+  return {
+    withItems,
+    withoutItems,
+    savedSeconds: withoutItems.plan.finish - withItems.plan.finish,
+  };
+}

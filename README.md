@@ -24,7 +24,8 @@ Early development. Work arrives as a stack of pull requests, each one reviewable
 | 4   | Remaining-work calculator, critical path and lower bound  |
 | 5   | Scheduler: one simulation run, time rules, invariants     |
 | 6   | Plan search, plan hash, golden plans                      |
-| …   | Boosters and events, web app, game data build             |
+| 7   | Magic items and events in the plan                        |
+| …   | Web app, game data build                                  |
 
 ## Layout
 

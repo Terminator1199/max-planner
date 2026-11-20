@@ -1,10 +1,10 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { remainingWork } from "../calc/remaining.ts";
-import { T0, fakeVillage, fakeWork, sampleGameData } from "../test-support.ts";
+import { T0, fakeVillage, fakeWork, magicItems, sampleGameData } from "../test-support.ts";
 import { randomGameData, randomVillage } from "../test-random.ts";
 import { mulberry32 } from "./prng.ts";
-import { betterPlan, planHash, searchPlan } from "./search.ts";
+import { betterPlan, planHash, searchPlan, searchWithItems } from "./search.ts";
 import { simulate } from "./simulate.ts";
 
 const H = 3600;
@@ -132,4 +132,20 @@ test("a tolerance trades a little finish for more early value, never more than a
     if (loose.plan.finish > loose.fastestFinish) traded++;
   }
   assert.ok(traded > 0, "no village traded finish for value");
+});
+
+test("items are planned twice, with and without, and the saving is the difference", () => {
+  const work = fakeWork(
+    [1, 2, 3, 4].map((entityId) => ({ entityId, seconds: 20 * H })),
+    4,
+  );
+  const boosters = {
+    items: magicItems(),
+    arrivals: [{ item: "builder-potion", at: T0, count: 1, source: "stock" as const }],
+  };
+  const result = searchWithItems(work, fakeVillage(4), gd, { boosters, variants: 4 });
+  assert.equal(result.withoutItems.plan.finish - T0, 20 * H);
+  assert.equal(result.withItems.plan.finish - T0, 11 * H);
+  assert.equal(result.savedSeconds, 9 * H);
+  assert.deepEqual(result.withoutItems.plan.itemUses, []);
 });
