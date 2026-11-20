@@ -16,13 +16,14 @@ Planned features, from the design docs:
 
 Early development. Work arrives as a stack of pull requests, each one reviewable on its own:
 
-| PR  | Scope                                                     |
-| --- | --------------------------------------------------------- |
-| 1   | Monorepo scaffold, TypeScript, tests, CI                  |
-| 2   | Data file schemas, validators and hand-written data files |
-| 3   | Export parser and import report                           |
-| 4   | Remaining-work calculator, critical path and lower bound  |
-| …   | Scheduler, boosters and events, web app, game data build  |
+| PR  | Scope                                                      |
+| --- | ---------------------------------------------------------- |
+| 1   | Monorepo scaffold, TypeScript, tests, CI                   |
+| 2   | Data file schemas, validators and hand-written data files  |
+| 3   | Export parser and import report                            |
+| 4   | Remaining-work calculator, critical path and lower bound   |
+| 5   | Scheduler: one simulation run, time rules, invariants      |
+| …   | Plan search, boosters and events, web app, game data build |
 
 ## Layout
 
