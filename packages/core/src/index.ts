@@ -49,3 +49,13 @@ export {
   type GoldPassOptions,
 } from "./time/goldpass.ts";
 export { OnlineCalendar, type OfflineRule, type OnlineOptions } from "./time/online.ts";
+export {
+  searchPlan,
+  planHash,
+  betterPlan,
+  type RunKind,
+  type SearchOptions,
+  type SearchResult,
+} from "./sched/search.ts";
+export { mulberry32, type Rng } from "./sched/prng.ts";
+export { sha256 } from "./util/sha256.ts";

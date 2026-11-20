@@ -76,7 +76,11 @@ export interface Plan {
   workers: Worker[];
   halls: HallDates[];
   unplaced: { stepId: string; reason: string }[];
-  /** Strategy value of the steps that end within 30 days; breaks ties between plans. */
+  /**
+   * Strategy value delivered in the first 30 days, each step's weight scaled by how early
+   * it ends (full at the start, nothing at day 30). Breaks ties between plans that
+   * finish together, favouring the one that does the strategy's priorities first.
+   */
   valueIn30Days: number;
   /** Choices made between two or more ready steps. */
   decisions: number;
@@ -196,12 +200,12 @@ export function simulate(
     workers.find((w) => w.lane === lane && !w.temporary && w.opensAt <= t);
 
   // --- Bookkeeping ----------------------------------------------------------------------------
-  const ready: Record<Lane, Set<string>> = {
+  const ready: Record<Lane, Set<Step>> = {
     builder: new Set(),
     lab: new Set(),
     petHouse: new Set(),
   };
-  const instant = new Set<string>();
+  const instant = new Set<Step>();
   const placed = new Map<string, PlacedStep>();
   const workerOf = new Map<string, WorkerState>();
   const heldOf = new Map<string, WorkerState>();
@@ -215,17 +219,19 @@ export function simulate(
 
   const enqueue = (s: Step) => {
     if (s.inProgress) return;
-    if (s.seconds === 0) instant.add(s.id);
-    else ready[s.lane].add(s.id);
+    if (s.seconds === 0) instant.add(s);
+    else ready[s.lane].add(s);
   };
 
   const discountsAt = (s: Step, t: number): Discount[] =>
     s.inProgress ? [] : sources.map((f) => f(s, t));
   const durationAt = (s: Step, t: number) =>
-    discountedSeconds(
-      s.seconds,
-      discountsAt(s, t).map((d) => d.timePct),
-    );
+    sources.length === 0 || s.inProgress
+      ? s.seconds
+      : discountedSeconds(
+          s.seconds,
+          discountsAt(s, t).map((d) => d.timePct),
+        );
 
   const place = (s: Step, w: WorkerState | null, t: number, reason: Reason) => {
     const ds = discountsAt(s, t);
@@ -255,8 +261,8 @@ export function simulate(
       ...(s.hall ? { hall: true as const } : {}),
     };
     placed.set(s.id, p);
-    ready[s.lane].delete(s.id);
-    instant.delete(s.id);
+    ready[s.lane].delete(s);
+    instant.delete(s);
     if (w) {
       w.running = s.id;
       w.busyUntil = p.end;
@@ -323,13 +329,30 @@ export function simulate(
     if (a.seconds !== b.seconds) return b.seconds - a.seconds;
     return compareIds(a.step, b.step);
   };
-  const ranked = (list: Iterable<Step>, t: number) =>
-    [...list].map((s) => score(s, t)).sort(better);
-  /** Picks from a ranked list, honouring swaps, and names the reason. */
-  const choose = (list: Scored[]): { pick: Scored; reason: Reason } => {
-    if (list.length === 1) return { pick: list[0]!, reason: "only-ready" };
+  /**
+   * The best and second-best candidates, in one pass: a decision needs no more, and
+   * sorting every ready step at every decision was most of a run's time.
+   */
+  const top2 = (lists: Iterable<Step>[], t: number, keep?: (s: Step) => boolean): Scored[] => {
+    let first: Scored | undefined;
+    let second: Scored | undefined;
+    for (const list of lists) {
+      for (const s of list) {
+        if (keep && !keep(s)) continue;
+        const c = score(s, t);
+        if (!first || better(c, first) < 0) {
+          second = first;
+          first = c;
+        } else if (!second || better(c, second) < 0) second = c;
+      }
+    }
+    return first ? (second ? [first, second] : [first]) : [];
+  };
+  /** Picks from the top two, honouring swaps, and names the reason. */
+  const choose = (top: Scored[]): { pick: Scored; reason: Reason } => {
+    if (top.length === 1) return { pick: top[0]!, reason: "only-ready" };
     const n = decisions++;
-    const pick = options.swaps?.has(n) ? list[1]! : list[0]!;
+    const pick = options.swaps?.has(n) ? top[1]! : top[0]!;
     return { pick, reason: pick.critical ? "critical" : "value" };
   };
 
@@ -343,17 +366,16 @@ export function simulate(
 
   // --- Decisions -----------------------------------------------------------------------------
   const assignBuilder = (w: WorkerState, t: number) => {
-    const startable = [...ready.builder].map((id) => steps.get(id)!).filter((s) => canHold(s, t));
-    if (startable.length === 0) return;
     // A Laboratory or Pet House already waiting for this upgrade gets the builder first.
-    const reserved = startable.find(
-      (s) => s.blocksLane && laneWorker(s.blocksLane, t)?.reservedFor === s.id,
-    );
-    if (reserved) {
-      place(reserved, w, t, score(reserved, t).critical ? "critical" : "value");
-      return;
+    for (const s of ready.builder) {
+      if (s.blocksLane && laneWorker(s.blocksLane, t)?.reservedFor === s.id && canHold(s, t)) {
+        place(s, w, t, score(s, t).critical ? "critical" : "value");
+        return;
+      }
     }
-    const { pick, reason } = choose(ranked(startable, t));
+    const top = top2([ready.builder], t, (s) => canHold(s, t));
+    if (top.length === 0) return;
+    const { pick, reason } = choose(top);
     place(pick.step, w, t, reason);
   };
 
@@ -364,12 +386,13 @@ export function simulate(
     }
     // Upgrading this building stops the lane, so its upgrade competes with the lane's
     // own work: if it wins, the worker waits for a builder instead of starting research.
-    const blocking = [...ready.builder]
-      .map((id) => steps.get(id)!)
-      .filter((s) => s.blocksLane === w.lane);
-    const own = [...ready[w.lane]].map((id) => steps.get(id)!);
-    if (own.length + blocking.length === 0) return;
-    const { pick, reason } = choose(ranked([...own, ...blocking], t));
+    const top = top2(
+      [ready[w.lane], ready.builder],
+      t,
+      (s) => s.lane === w.lane || s.blocksLane === w.lane,
+    );
+    if (top.length === 0) return;
+    const { pick, reason } = choose(top);
     if (pick.step.lane === w.lane) {
       place(pick.step, w, t, reason);
       return;
@@ -392,11 +415,9 @@ export function simulate(
         soonest = Math.min(soonest, b.busyUntil);
       }
     }
-    const fits = [...ready[w.lane]]
-      .map((id) => steps.get(id)!)
-      .filter((r) => t + durationAt(r, t) <= soonest);
-    if (fits.length === 0) return;
-    const { pick, reason } = choose(ranked(fits, t));
+    const top = top2([ready[w.lane]], t, (r) => t + durationAt(r, t) <= soonest);
+    if (top.length === 0) return;
+    const { pick, reason } = choose(top);
     place(pick.step, w, t, reason);
   };
 
@@ -410,10 +431,9 @@ export function simulate(
       return;
     }
     while (instant.size > 0) {
-      const ids = [...instant].sort((a, b) => compareIds(steps.get(a)!, steps.get(b)!));
-      for (const id of ids) {
-        place(steps.get(id)!, null, t, "instant");
-        complete(id, t);
+      for (const s of [...instant].sort(compareIds)) {
+        place(s, null, t, "instant");
+        complete(s.id, t);
       }
     }
     for (const lane of LANES) {
@@ -472,8 +492,9 @@ export function simulate(
   let valueIn30Days = 0;
   for (const p of list) {
     finish = Math.max(finish, p.end);
-    if (p.reason !== "running" && p.end <= start + 30 * DAY) {
-      valueIn30Days += weights[steps.get(p.id)!.category];
+    const elapsed = p.end - start;
+    if (p.reason !== "running" && elapsed < 30 * DAY) {
+      valueIn30Days += weights[steps.get(p.id)!.category] * (1 - elapsed / (30 * DAY));
     }
   }
 
@@ -504,7 +525,7 @@ export function simulate(
     ),
     halls,
     unplaced,
-    valueIn30Days: Math.round(valueIn30Days * 1000) / 1000,
+    valueIn30Days: Math.round(valueIn30Days * 1e6) / 1e6,
     decisions,
     targetFinish,
   };
