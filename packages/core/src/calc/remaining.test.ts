@@ -104,6 +104,18 @@ test("target hall 3: a cost above storage capacity waits on storage upgrades", (
   assert.ok(!barbarian3?.after.some((id) => id.startsWith(`${IDS.elixirStorage}:`)));
 });
 
+test("a hall upgrade costing more than its storages hold is noted, not a cycle", () => {
+  // Town Hall 3 now costs 30000 gold. Two level 2 Gold Storages hold 12000, and level 3
+  // storages need Town Hall 3 itself, so no storage upgrade can make room.
+  const pricey = sampleGameData((file) => {
+    file.entities.find((e) => e.id === IDS.townHall)!.levels[2]!.cost = 30_000;
+  });
+  const work = remainingWork(fixtureVillage(), pricey, { targetTownHall: 3 });
+  const hall3 = byId(work.steps).get(stepId(IDS.townHall, 0, 3))!;
+  assert.ok(!hall3.after.some((id) => id.startsWith(`${IDS.goldStorage}:`)));
+  assert.ok(work.notes.some((n) => n.startsWith("1 step cost more gold than the storages")));
+});
+
 test("target hall 3: the hero chain after the hall is the bottleneck", () => {
   const { lowerBound } = remainingWork(fixtureVillage(), gd, { targetTownHall: 3 });
   assert.equal(lowerBound.builders, 3, "hall 3 allows a third builder");

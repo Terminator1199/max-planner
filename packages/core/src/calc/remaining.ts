@@ -378,29 +378,36 @@ export function remainingWork(
     const storageSteps = [...steps.values()]
       .filter((s) => storageIds.has(s.entityId))
       .sort((a, b) => a.toLevel - b.toLevel || a.entityId - b.entityId || a.instance - b.instance);
-    const ladder: { capacity: number; prefix: string[] }[] = [];
+    // `hall` is the highest Town Hall any storage step in the prefix needs.
+    const ladder: { capacity: number; prefix: string[]; hall: number }[] = [];
     const prefix: string[] = [];
+    let hall = current;
     for (const s of storageSteps) {
       levels.set(`${s.entityId}:${s.instance}`, { entityId: s.entityId, level: s.toLevel });
       prefix.push(s.id);
+      hall = Math.max(hall, s.townHall);
       ladder.push({
         capacity: gd.storageCapacity(resource, [...levels.values()]),
         prefix: [...prefix],
+        hall,
       });
     }
-    const most = ladder.at(-1)?.capacity ?? capacity;
     let short = 0;
     for (const step of steps.values()) {
       if (step.inProgress || step.resource !== resource || step.cost <= capacity) continue;
       // Storages never wait on storages, so they cannot form a cycle between resources.
       if (anyStorage.has(step.entityId)) continue;
       const rung = ladder.find((l) => l.capacity >= step.cost);
-      if (rung) step.after.push(...rung.prefix.filter((id) => id !== step.id));
-      else short++;
+      // A step may only wait on storage levels its own hall allows: a storage needing a
+      // higher hall waits on that hall's upgrade, which may be this very step. A cost no
+      // allowed storage can hold is a data problem, reported in the notes.
+      if (rung && rung.hall <= step.townHall) {
+        step.after.push(...rung.prefix.filter((id) => id !== step.id));
+      } else short++;
     }
     if (short > 0) {
       notes.push(
-        `${short} step${short === 1 ? "" : "s"} cost more ${resource} than the storages in the game data hold (${most}); no storage edge was added.`,
+        `${short} step${short === 1 ? "" : "s"} cost more ${resource} than the storages allowed at ${short === 1 ? "its" : "their"} Town Hall can hold; no storage edge was added.`,
       );
     }
   }
