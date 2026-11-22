@@ -1,8 +1,17 @@
 // One scheduling run: a forward event simulation over builders, the Laboratory and the
 // Pet House. Each time a worker frees up it takes one ready step, picked by slack
 // (steps on the critical path first) and then by value for the chosen strategy.
-import type { GameData, Lane, Resource } from "@max-planner/gamedata";
+import type { GameData, Lane, MagicItem, Resource } from "@max-planner/gamedata";
+import {
+  DEFAULT_ITEM_RULES,
+  Inventory,
+  potionsFor,
+  type Arrival,
+  type ItemRules,
+  type Waste,
+} from "../boost/inventory.ts";
 import type { RemainingWork, Step } from "../calc/remaining.ts";
+import { blockedUntil, eventDiscounts, saleEndsAt, type EventWindow } from "../events/windows.ts";
 import type { OnlineCalendar } from "../time/online.ts";
 import { discountedCost, discountedSeconds, type Discount } from "../time/rounding.ts";
 import type { Village } from "../types.ts";
@@ -20,8 +29,9 @@ const LANES: readonly Lane[] = ["builder", "lab", "petHouse"];
  * - `value`: it had the best value per hour among the ready steps.
  * - `only-ready`: nothing else could start.
  * - `instant`: it takes no time, so it happened as soon as it could.
+ * - `hammer`: a hammer finished it the moment a worker was free for it.
  */
-export type Reason = "running" | "critical" | "value" | "only-ready" | "instant";
+export type Reason = "running" | "critical" | "value" | "only-ready" | "instant" | "hammer";
 
 /** Percent off a step started at time `t`, from one source such as the Gold Pass. */
 export type DiscountSource = (step: Step, t: number) => Discount;
@@ -45,7 +55,7 @@ export interface PlacedStep {
   worker: number | null;
   start: number;
   end: number;
-  /** Time it took, after discounts. */
+  /** Time on its worker, after discounts, potions and any book. */
   seconds: number;
   baseSeconds: number;
   cost: number;
@@ -55,7 +65,21 @@ export interface PlacedStep {
   reason: Reason;
   /** The worker held idle while this runs, as the Laboratory is during its own upgrade. */
   holds?: number;
+  /** The book or hammer that finished it. */
+  item?: string;
   hall?: true;
+}
+
+export interface ItemUse {
+  item: string;
+  kind: "potion" | "book" | "hammer";
+  at: number;
+  /** Potions: the lane sped up. */
+  lane?: Lane;
+  /** Books and hammers: the step finished. */
+  stepId?: string;
+  /** Worker time saved: the time skipped, or the potion's bonus for each busy worker. */
+  savedSeconds: number;
 }
 
 export interface HallDates {
@@ -86,6 +110,10 @@ export interface Plan {
   decisions: number;
   /** The finish the slack was measured against, as seconds after the start. */
   targetFinish: number;
+  /** Magic items used, in time order. */
+  itemUses: ItemUse[];
+  /** Items that arrived beyond their holding limit before the finish. */
+  wasted: Waste[];
 }
 
 export interface SimulateOptions {
@@ -104,6 +132,14 @@ export interface SimulateOptions {
   labPriority?: readonly number[];
   /** Decision numbers at which the second-best step is taken instead of the best. */
   swaps?: ReadonlySet<number>;
+  /** Switched-on event windows (see `expandEvents`): discounts and start blocks. */
+  events?: readonly EventWindow[];
+  /** Magic items to use, with when they arrive (see `arrivals`). */
+  boosters?: {
+    items: readonly MagicItem[];
+    arrivals: readonly Arrival[];
+    rules?: Partial<ItemRules>;
+  };
 }
 
 interface WorkerState extends Worker {
@@ -147,7 +183,11 @@ export function simulate(
   const delta = options.criticalSlackSeconds ?? 12 * HOUR;
   const calendar = options.calendar;
   const wiggle = options.wiggleSeconds ?? 600;
-  const sources = options.discounts ?? [];
+  const windows = options.events ?? [];
+  const sources = [...(options.discounts ?? []), ...eventDiscounts(windows)];
+  const items = options.boosters?.items ?? [];
+  const inventory = options.boosters ? new Inventory(items, options.boosters.arrivals) : undefined;
+  const rules: ItemRules = { ...DEFAULT_ITEM_RULES, ...options.boosters?.rules };
   const priority = new Map((options.labPriority ?? []).map((id, i) => [id, i]));
 
   const steps = new Map(work.steps.map((s) => [s.id, s]));
@@ -215,7 +255,55 @@ export function simulate(
   );
   let seq = 0;
   const wakes = new Set<number>();
+  /** Wakes every worker at `at`, once however many ask. */
+  const wakeAt = (at: number) => {
+    if (wakes.has(at)) return;
+    wakes.add(at);
+    events.push({ at, kind: 1, seq: seq++ });
+  };
   let decisions = 0;
+  const done = new Set<string>();
+  const running = new Set<string>();
+  /** Work left in each placed step, in seconds at the normal rate, after discounts. */
+  const workOf = new Map<string, number>();
+  const itemUses: ItemUse[] = [];
+
+  // --- Work rates ------------------------------------------------------------------------------
+  // A potion speeds up every worker of its lane for a while. Segments never overlap: a
+  // potion is not used while another runs on the same lane.
+  const boosts: Record<Lane, { from: number; to: number; bonus: number }[]> = {
+    builder: [],
+    lab: [],
+    petHouse: [],
+  };
+  /** When `amount` seconds of work started at `begin` are done, walking the boosts. */
+  const endFor = (begin: number, amount: number, lane: Lane): number => {
+    let t = begin;
+    let left = amount;
+    for (const b of boosts[lane]) {
+      if (b.to <= t) continue;
+      if (b.from > t) {
+        if (left <= b.from - t) return t + left;
+        left -= b.from - t;
+        t = b.from;
+      }
+      const rate = 1 + b.bonus;
+      if (left <= (b.to - t) * rate) return t + Math.ceil(left / rate);
+      left -= (b.to - t) * rate;
+      t = b.to;
+    }
+    return t + left;
+  };
+  /** Work done between `begin` and `t` on a lane. */
+  const doneBy = (begin: number, t: number, lane: Lane): number => {
+    let total = t - begin;
+    for (const b of boosts[lane]) {
+      const overlap = Math.min(b.to, t) - Math.max(b.from, begin);
+      if (overlap > 0) total += overlap * b.bonus;
+    }
+    return total;
+  };
+  const boostedAt = (lane: Lane, t: number) => boosts[lane].some((b) => b.from <= t && t < b.to);
 
   const enqueue = (s: Step) => {
     if (s.inProgress) return;
@@ -233,16 +321,22 @@ export function simulate(
           discountsAt(s, t).map((d) => d.timePct),
         );
 
-  const place = (s: Step, w: WorkerState | null, t: number, reason: Reason) => {
+  const place = (s: Step, w: WorkerState | null, t: number, reason: Reason, item?: string) => {
     const ds = discountsAt(s, t);
-    const seconds = discountedSeconds(
+    const amount = discountedSeconds(
       s.seconds,
       ds.map((d) => d.timePct),
     );
-    const cost = discountedCost(
-      s.cost,
-      ds.map((d) => d.costPct),
-    );
+    // A hammer finishes the step now, at no cost.
+    const cost =
+      reason === "hammer"
+        ? 0
+        : discountedCost(
+            s.cost,
+            ds.map((d) => d.costPct),
+          );
+    const end = w ? endFor(t, amount, s.lane) : t;
+    const seconds = end - t;
     const p: PlacedStep = {
       id: s.id,
       entityId: s.entityId,
@@ -251,22 +345,25 @@ export function simulate(
       lane: s.lane,
       worker: w ? workers.indexOf(w) : null,
       start: t,
-      end: t + seconds,
+      end,
       seconds,
       baseSeconds: s.seconds,
       cost,
       resource: s.resource,
       timePcts: ds.map((d) => d.timePct).filter((x) => x > 0),
       reason,
+      ...(item ? { item } : {}),
       ...(s.hall ? { hall: true as const } : {}),
     };
     placed.set(s.id, p);
+    workOf.set(s.id, amount);
     ready[s.lane].delete(s);
     instant.delete(s);
     if (w) {
       w.running = s.id;
       w.busyUntil = p.end;
       workerOf.set(s.id, w);
+      running.add(s.id);
     }
     if (s.blocksLane) {
       const held = laneWorker(s.blocksLane, t);
@@ -284,6 +381,9 @@ export function simulate(
   };
 
   const complete = (id: string, t: number) => {
+    if (done.has(id)) return;
+    done.add(id);
+    running.delete(id);
     const s = steps.get(id)!;
     const w = workerOf.get(id);
     if (w) {
@@ -364,16 +464,157 @@ export function simulate(
     return isFree(held, t) && (held.reservedFor === undefined || held.reservedFor === s.id);
   };
 
+  /** An event stops this step starting now; the workers look again when it ends. */
+  const blocked = (s: Step, t: number) => {
+    const until = blockedUntil(windows, s, t);
+    if (until === undefined) return false;
+    wakeAt(until);
+    return true;
+  };
+
+  // --- Magic items -----------------------------------------------------------------------------
+  const hammers = items.filter((i) => i.kind === "hammer");
+  const books = items.filter((i) => i.kind === "book");
+
+  /**
+   * While a worker is free, each hammer in stock finishes the best waiting step of its
+   * categories that is at least `hammerMinDays` long; the worker then picks again.
+   */
+  const useHammers = (lane: Lane, t: number) => {
+    if (!inventory) return;
+    for (const hammer of hammers) {
+      while (inventory.available(hammer.id, t) > 0) {
+        const [best] = top2(
+          [ready[lane]],
+          t,
+          (s) =>
+            hammer.categories!.includes(s.category) &&
+            durationAt(s, t) >= rules.hammerMinDays * DAY &&
+            canHold(s, t) &&
+            !blocked(s, t),
+        );
+        if (!best) break;
+        inventory.use(hammer.id, t);
+        itemUses.push({
+          item: hammer.id,
+          kind: "hammer",
+          at: t,
+          stepId: best.step.id,
+          savedSeconds: best.seconds,
+        });
+        place(best.step, null, t, "hammer", hammer.id);
+        complete(best.step.id, t);
+      }
+    }
+  };
+
+  /**
+   * Books finish running steps with at least `bookMinDays` left, longest first. Book of
+   * Everything is used only when no other book in stock fits the step.
+   */
+  const useBooks = (t: number): boolean => {
+    if (!inventory || books.length === 0) return false;
+    if (rules.saveBooksForFullPrice) {
+      const saleEnd = saleEndsAt(windows, t);
+      if (saleEnd !== undefined) {
+        wakeAt(saleEnd);
+        return false;
+      }
+    }
+    let used = false;
+    for (;;) {
+      const candidates = [...running]
+        .map((id) => placed.get(id)!)
+        .filter((p) => p.end - t >= rules.bookMinDays * DAY)
+        .sort((a, b) => b.end - a.end || compareIds(steps.get(a.id)!, steps.get(b.id)!));
+      let usedNow = false;
+      for (const p of candidates) {
+        const category = steps.get(p.id)!.category;
+        const fits = books.filter(
+          (b) => b.categories!.includes(category) && inventory.available(b.id, t) > 0,
+        );
+        const book = fits.find((b) => !b.fallbackOnly) ?? fits[0];
+        if (!book) continue;
+        inventory.use(book.id, t);
+        itemUses.push({
+          item: book.id,
+          kind: "book",
+          at: t,
+          stepId: p.id,
+          savedSeconds: p.end - t,
+        });
+        p.end = t;
+        p.seconds = t - p.start;
+        p.item = book.id;
+        complete(p.id, t);
+        usedNow = used = true;
+        break;
+      }
+      if (!usedNow) return used;
+    }
+  };
+
+  /**
+   * A potion is used when every worker of its lane is busy with at least as much work
+   * left as the potion can do: 10 hours for builders, 24 for the Laboratory or Pet House.
+   */
+  const usePotions = (t: number) => {
+    if (!inventory || rules.potions === "off") return;
+    for (const lane of LANES) {
+      if (boostedAt(lane, t)) continue;
+      const ws = workers.filter(
+        (w) => w.lane === lane && w.opensAt <= t && w.closesAt === undefined,
+      );
+      if (ws.length === 0) continue;
+      for (const potion of potionsFor(items, lane)) {
+        if (inventory.available(potion.id, t) === 0) continue;
+        const bonus = potion.rateBonus!;
+        const length = potion.seconds!;
+        const allBusy = ws.every((w) => {
+          if (!w.running) return false;
+          const p = placed.get(w.running)!;
+          return workOf.get(p.id)! - doneBy(p.start, t, lane) >= (1 + bonus) * length;
+        });
+        if (!allBusy) continue;
+        inventory.use(potion.id, t);
+        boosts[lane].push({ from: t, to: t + length, bonus });
+        itemUses.push({
+          item: potion.id,
+          kind: "potion",
+          at: t,
+          lane,
+          savedSeconds: bonus * length * ws.length,
+        });
+        for (const w of ws) {
+          const p = placed.get(w.running!)!;
+          p.end = endFor(p.start, workOf.get(p.id)!, lane);
+          p.seconds = p.end - p.start;
+          w.busyUntil = p.end;
+          const held = heldOf.get(p.id);
+          if (held) held.busyUntil = p.end;
+          events.push({ at: p.end, kind: 0, seq: seq++, id: p.id });
+        }
+        break;
+      }
+    }
+  };
+
   // --- Decisions -----------------------------------------------------------------------------
   const assignBuilder = (w: WorkerState, t: number) => {
     // A Laboratory or Pet House already waiting for this upgrade gets the builder first.
     for (const s of ready.builder) {
-      if (s.blocksLane && laneWorker(s.blocksLane, t)?.reservedFor === s.id && canHold(s, t)) {
+      if (
+        s.blocksLane &&
+        laneWorker(s.blocksLane, t)?.reservedFor === s.id &&
+        canHold(s, t) &&
+        !blocked(s, t)
+      ) {
         place(s, w, t, score(s, t).critical ? "critical" : "value");
         return;
       }
     }
-    const top = top2([ready.builder], t, (s) => canHold(s, t));
+    useHammers("builder", t);
+    const top = top2([ready.builder], t, (s) => canHold(s, t) && !blocked(s, t));
     if (top.length === 0) return;
     const { pick, reason } = choose(top);
     place(pick.step, w, t, reason);
@@ -386,10 +627,11 @@ export function simulate(
     }
     // Upgrading this building stops the lane, so its upgrade competes with the lane's
     // own work: if it wins, the worker waits for a builder instead of starting research.
+    useHammers(w.lane, t);
     const top = top2(
       [ready[w.lane], ready.builder],
       t,
-      (s) => s.lane === w.lane || s.blocksLane === w.lane,
+      (s) => (s.lane === w.lane || s.blocksLane === w.lane) && !blocked(s, t),
     );
     if (top.length === 0) return;
     const { pick, reason } = choose(top);
@@ -405,7 +647,7 @@ export function simulate(
   const backfill = (w: WorkerState, t: number) => {
     const s = steps.get(w.reservedFor!)!;
     const freeBuilder = workers.find((b) => b.lane === "builder" && isFree(b, t));
-    if (freeBuilder && canHold(s, t)) {
+    if (freeBuilder && canHold(s, t) && !blocked(s, t)) {
       place(s, freeBuilder, t, score(s, t).critical ? "critical" : "value");
       return;
     }
@@ -415,56 +657,61 @@ export function simulate(
         soonest = Math.min(soonest, b.busyUntil);
       }
     }
-    const top = top2([ready[w.lane]], t, (r) => t + durationAt(r, t) <= soonest);
+    const top = top2([ready[w.lane]], t, (r) => t + durationAt(r, t) <= soonest && !blocked(r, t));
     if (top.length === 0) return;
     const { pick, reason } = choose(top);
     place(pick.step, w, t, reason);
   };
 
   const decide = (t: number) => {
+    // Nothing starts and no item is used while the player is offline.
     if (calendar && !calendar.isOnline(t)) {
-      const back = calendar.nextOnline(calendar.nextOnline(t) + wiggle);
-      if (!wakes.has(back)) {
-        wakes.add(back);
-        events.push({ at: back, kind: 1, seq: seq++ });
-      }
+      wakeAt(calendar.nextOnline(calendar.nextOnline(t) + wiggle));
       return;
     }
-    while (instant.size > 0) {
-      for (const s of [...instant].sort(compareIds)) {
-        place(s, null, t, "instant");
-        complete(s.id, t);
+    // A book frees a worker, so the workers pick again until no book is used.
+    do {
+      while (instant.size > 0) {
+        for (const s of [...instant].sort(compareIds)) {
+          place(s, null, t, "instant");
+          complete(s.id, t);
+        }
       }
-    }
-    for (const lane of LANES) {
-      for (const w of workers) {
-        if (w.lane !== lane || !isFree(w, t)) continue;
-        if (lane === "builder") assignBuilder(w, t);
-        else assignSingle(w, t);
+      for (const lane of LANES) {
+        for (const w of workers) {
+          if (w.lane !== lane || !isFree(w, t)) continue;
+          if (lane === "builder") assignBuilder(w, t);
+          else assignSingle(w, t);
+        }
       }
-    }
+    } while (useBooks(t));
+    // Potions last, once every worker that can be busy is.
+    usePotions(t);
   };
 
   // --- Run -------------------------------------------------------------------------------------
   // Steps running in the export occupy their workers from the start. Any beyond the
   // workers the village has, such as an event builder's, get a temporary worker.
-  const running = work.steps.filter((s) => s.inProgress);
-  running.sort((a, b) => Number(!!a.blocksLane) - Number(!!b.blocksLane) || compareIds(a, b));
-  for (const s of running) {
+  const pinned = work.steps.filter((s) => s.inProgress);
+  pinned.sort((a, b) => Number(!!a.blocksLane) - Number(!!b.blocksLane) || compareIds(a, b));
+  for (const s of pinned) {
     const w =
       workers.find((x) => x.lane === s.lane && isFree(x, start)) ?? addWorker(s.lane, start, true);
     place(s, w, start, "running");
   }
   for (const s of work.steps) if (!s.inProgress && waiting.get(s.id) === 0) enqueue(s);
 
+  let lastDecision = start;
   decide(start);
   while (events.size > 0) {
     // Every finish at `t` lands before anyone picks, so all newly ready steps compete.
     const t = events.peek()!.at;
+    lastDecision = t;
     while (events.size > 0 && events.peek()!.at === t) {
       const e = events.pop()!;
       if (e.kind === 1) wakes.delete(t);
-      else complete(e.id!, t);
+      // A potion or book may have moved the end; only the current end counts.
+      else if (placed.get(e.id!)!.end === t) complete(e.id!, t);
     }
     decide(t);
   }
@@ -516,6 +763,9 @@ export function simulate(
     halls.push({ townHall: r, reachedAt, maxedAt });
   }
 
+  // Count arrivals up to the finish, so items wasted before it are reported.
+  if (inventory && items[0]) inventory.available(items[0].id, Math.max(finish, lastDecision));
+
   return {
     start,
     finish,
@@ -528,6 +778,8 @@ export function simulate(
     valueIn30Days: Math.round(valueIn30Days * 1e6) / 1e6,
     decisions,
     targetFinish,
+    itemUses,
+    wasted: inventory?.wasted() ?? [],
   };
 }
 

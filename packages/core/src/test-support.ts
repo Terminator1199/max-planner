@@ -2,8 +2,12 @@
 import { readFileSync } from "node:fs";
 import {
   createGameData,
+  validateEvents,
   validateGameData,
+  validateMagicItems,
   type Category,
+  type GameEvent,
+  type MagicItem,
   type GameData,
   type GameDataFile,
   type Lane,
@@ -11,6 +15,8 @@ import {
 import { stepId, type RemainingWork, type Step } from "./calc/remaining.ts";
 import type { Village } from "./types.ts";
 import sample from "../../../fixtures/gamedata/sample.json" with { type: "json" };
+import itemsFile from "@max-planner/gamedata/files/magic-items.json" with { type: "json" };
+import eventsFile from "@max-planner/gamedata/files/events.json" with { type: "json" };
 
 export const IDS = {
   townHall: 9000001,
@@ -134,4 +140,18 @@ export function fakeVillage(builders: number, options: { lab?: boolean } = {}): 
     instances.push({ entityId: IDS.builderHut, index: i, level: 1 });
   if (options.lab !== false) instances.push({ entityId: IDS.laboratory, index: 0, level: 1 });
   return { tag: "#FAKE", exportedAt: T0, townHall: 1, builders, instances, walls: [], helpers: [] };
+}
+
+/** The magic items from packages/gamedata/files, validated. */
+export function magicItems(): MagicItem[] {
+  const result = validateMagicItems(itemsFile);
+  if (!result.ok) throw new Error(JSON.stringify(result.errors));
+  return result.value.items;
+}
+
+/** The events from packages/gamedata/files, validated. */
+export function gameEvents(): GameEvent[] {
+  const result = validateEvents(eventsFile);
+  if (!result.ok) throw new Error(JSON.stringify(result.errors));
+  return result.value.events;
 }

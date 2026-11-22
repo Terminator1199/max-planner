@@ -33,5 +33,10 @@
     "hash": "e385b36d13f1a8f0aeb904330d4ce542f04ec2da54da6156cef7820ba81044cf",
     "finishSeconds": 89120,
     "note": "First golden plans for the plan search."
+  },
+  "synthetic-th2/balanced/th3/items-events": {
+    "hash": "66b05985211ee36034d2d7cdace4ad3ef4b193f035bc62257cdc4b9a58b6ea73",
+    "finishSeconds": 48300,
+    "note": "Adds a plan with items and events."
   }
 }

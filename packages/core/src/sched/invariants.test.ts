@@ -3,8 +3,10 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { GameData } from "@max-planner/gamedata";
+import { arrivals, Inventory, type Arrival } from "../boost/inventory.ts";
 import { remainingWork, type RemainingWork } from "../calc/remaining.ts";
-import { T0, sampleGameData } from "../test-support.ts";
+import { blockedUntil, expandEvents, type EventWindow } from "../events/windows.ts";
+import { T0, gameEvents, magicItems, sampleGameData } from "../test-support.ts";
 import { randomGameData, randomVillage } from "../test-random.ts";
 import { goldPassDiscount } from "../time/goldpass.ts";
 import { OnlineCalendar } from "../time/online.ts";
@@ -22,7 +24,11 @@ interface Case {
   work: RemainingWork;
   options: SimulateOptions;
   discounted: boolean;
+  windows: EventWindow[];
+  incoming: Arrival[];
 }
+
+const ITEMS = magicItems();
 
 function randomCase(seed: number, gd?: GameData): Case {
   const rng = mulberry32(seed);
@@ -62,7 +68,48 @@ function randomCase(seed: number, gd?: GameData): Case {
   }
   if (rng.next() < 0.3) options.targetFinish = rng.int(0, 2) * work.lowerBound.seconds;
   if (rng.next() < 0.2) options.swaps = new Set([rng.int(0, 5), rng.int(0, 20)]);
-  return { seed, gd, village, work, options, discounted };
+
+  let windows: EventWindow[] = [];
+  if (rng.next() < 0.35) {
+    const start = at + rng.int(-2, 10) * 86_400;
+    const pct = rng.next() < 0.5 ? 50 : 20;
+    const sale = {
+      id: "random-sale",
+      name: "Random sale",
+      status: "confirmed" as const,
+      start: new Date(start * 1000).toISOString(),
+      end: new Date((start + rng.int(1, 10) * 86_400) * 1000).toISOString(),
+      effects: [
+        { kind: "discount" as const, timePct: pct, costPct: pct, villages: ["home" as const] },
+      ],
+      source: "test",
+    };
+    const enabled = ["random-sale", ...(rng.next() < 0.6 ? ["clan-war-league"] : [])];
+    windows = expandEvents([...gameEvents(), sale], at, at + 800 * 86_400, enabled);
+    options.events = windows;
+  }
+  let incoming: Arrival[] = [];
+  if (rng.next() < 0.4) {
+    const stock: Record<string, number> = {};
+    const perMonth: Record<string, number> = {};
+    for (const item of ITEMS) {
+      if (rng.next() < 0.4) stock[item.id] = rng.int(1, 2);
+      if (rng.next() < 0.25) perMonth[item.id] = rng.int(1, 2);
+    }
+    incoming = arrivals({ stock, perMonth }, 1, at, at + 800 * 86_400);
+    options.boosters = {
+      items: ITEMS,
+      arrivals: incoming,
+      rules: {
+        bookMinDays: rng.int(1, 6) / 2,
+        hammerMinDays: rng.int(1, 10) / 2,
+        saveBooksForFullPrice: rng.next() < 0.5,
+        potions: rng.next() < 0.8 ? "auto" : "off",
+      },
+    };
+  }
+  const changesTime = discounted || windows.length > 0 || incoming.length > 0;
+  return { seed, gd, village, work, options, discounted: changesTime, windows, incoming };
 }
 
 function checkPlan(c: Case, plan: Plan, again: Plan) {
@@ -119,7 +166,31 @@ function checkPlan(c: Case, plan: Plan, again: Plan) {
     }
   }
 
-  // 5. Without discounts the finish is never earlier than the lower bound.
+  // Items: never more than was in hand, never while offline; hammers and books behave.
+  const inventory = new Inventory(ITEMS, c.incoming);
+  for (const use of plan.itemUses) {
+    inventory.use(use.item, use.at); // throws if the plan used an item it did not have
+    if (options.calendar) assert.ok(options.calendar.isOnline(use.at), `${use.item} used offline`);
+    assert.ok(use.savedSeconds > 0, `${use.item} saved nothing`);
+  }
+  for (const p of plan.steps) {
+    if (p.reason === "hammer") {
+      assert.deepEqual([p.end, p.cost, p.worker], [p.start, 0, null], `${p.id} hammer`);
+      assert.ok(p.item?.startsWith("hammer-"));
+    }
+    if (p.item?.startsWith("book-")) assert.ok(p.end - p.start <= p.baseSeconds);
+    // No hero upgrade starts during the league (unlocks that take no time aside).
+    const step = steps.get(p.id)!;
+    if (p.reason !== "running" && p.reason !== "instant") {
+      assert.equal(blockedUntil(c.windows, step, p.start), undefined, `${p.id} starts in a block`);
+    }
+  }
+  assert.equal(
+    plan.itemUses.filter((u) => u.kind !== "potion").length,
+    plan.steps.filter((p) => p.item).length,
+  );
+
+  // 5. Without discounts or items the finish is never earlier than the lower bound.
   if (!c.discounted) {
     assert.ok(
       plan.finish - plan.start >= work.lowerBound.seconds,
@@ -161,7 +232,7 @@ function run(c: Case) {
   }
 }
 
-test("invariants hold on 300 random villages over random game data", () => {
+test("invariants hold on 300 random villages over random game data, items and events", () => {
   let steps = 0;
   for (let seed = 1; seed <= 300; seed++) steps += run(randomCase(seed)).steps.length;
   assert.ok(steps > 3000, `only ${steps} steps were exercised`);

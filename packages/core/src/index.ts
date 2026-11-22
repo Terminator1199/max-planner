@@ -27,6 +27,7 @@ export {
   compareIds,
   type DiscountSource,
   type HallDates,
+  type ItemUse,
   type Plan,
   type PlacedStep,
   type Reason,
@@ -51,11 +52,33 @@ export {
 export { OnlineCalendar, type OfflineRule, type OnlineOptions } from "./time/online.ts";
 export {
   searchPlan,
+  searchWithItems,
   planHash,
   betterPlan,
+  type ItemSavings,
   type RunKind,
   type SearchOptions,
   type SearchResult,
 } from "./sched/search.ts";
 export { mulberry32, type Rng } from "./sched/prng.ts";
 export { sha256 } from "./util/sha256.ts";
+export {
+  expandEvents,
+  eventDiscounts,
+  blockedUntil,
+  saleAt,
+  saleEndsAt,
+  type EventWindow,
+} from "./events/windows.ts";
+export {
+  arrivals,
+  defaultPerMonth,
+  potionsFor,
+  Inventory,
+  DEFAULT_ITEM_RULES,
+  type Arrival,
+  type ArrivalSource,
+  type BoosterSettings,
+  type ItemRules,
+  type Waste,
+} from "./boost/inventory.ts";
