@@ -1,6 +1,11 @@
 // Shared helpers for tests. Not exported from the package.
 import { readFileSync } from "node:fs";
-import { createGameData, validateGameData, type GameData } from "@max-planner/gamedata";
+import {
+  createGameData,
+  validateGameData,
+  type GameData,
+  type GameDataFile,
+} from "@max-planner/gamedata";
 import sample from "../../../fixtures/gamedata/sample.json" with { type: "json" };
 
 export const IDS = {
@@ -19,8 +24,11 @@ export const IDS = {
   wall: 9000050,
 } as const;
 
-export function sampleGameData(): GameData {
-  const result = validateGameData(sample);
+/** The sample game data, optionally changed first by `patch` (on a copy). */
+export function sampleGameData(patch?: (file: GameDataFile) => void): GameData {
+  const file = structuredClone(sample) as GameDataFile;
+  patch?.(file);
+  const result = validateGameData(file);
   if (!result.ok) throw new Error(JSON.stringify(result.errors));
   return createGameData(result.value);
 }
