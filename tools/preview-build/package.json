@@ -1,0 +1,11 @@
+{
+  "name": "@max-planner/preview-build",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "devDependencies": {
+    "@max-planner/core": "workspace:*",
+    "@max-planner/gamedata": "workspace:*",
+    "acorn": "8.18.0"
+  }
+}
