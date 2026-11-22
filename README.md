@@ -25,7 +25,8 @@ Early development. Work arrives as a stack of pull requests, each one reviewable
 | 5   | Scheduler: one simulation run, time rules, invariants     |
 | 6   | Plan search, plan hash, golden plans                      |
 | 7   | Magic items and events in the plan                        |
-| …   | Web app, game data build                                  |
+| 9   | Preview page: the real planner on a made-up demo village  |
+| …   | Real game data build, web app                             |
 
 ## Layout
 
@@ -33,10 +34,23 @@ Early development. Work arrives as a stack of pull requests, each one reviewable
 packages/
   core/       parser, calculator, scheduler (pure TypeScript, no DOM or network)
   gamedata/   schemas, validators, loaders and the data files
-apps/         web app (later)
-tools/        game data build (later)
+apps/
+  preview/    the preview page (no framework, no dependencies)
+tools/
+  preview-build/  bundles the preview into one HTML file
 fixtures/     sample game data, anonymised exports, golden plan hashes
 ```
+
+## See the preview
+
+The preview runs the real planner in your browser on a made-up demo village (the real game data
+is not built yet). Three ways to open it:
+
+- From a CI run: open the latest run under the repository's Actions tab and download the
+  `preview` artifact, then open `index.html`.
+- Locally: `pnpm install && pnpm preview:build`, then open `dist/preview/index.html`. It is one
+  self-contained file, so it works straight from disk.
+- Any static host: upload that one file.
 
 ## Development
 
@@ -47,6 +61,7 @@ pnpm install
 pnpm check        # typecheck, test, format check
 pnpm test         # node:test, runs the TypeScript sources directly
 pnpm typecheck
+pnpm preview:build  # dist/preview/index.html
 ```
 
 Engineering choices worth knowing:

@@ -34,3 +34,12 @@ jobs:
 
       - name: Format
         run: pnpm format:check
+
+      - name: Build preview
+        run: pnpm preview:build
+
+      - name: Upload preview
+        uses: actions/upload-artifact@v4
+        with:
+          name: preview
+          path: dist/preview/index.html
