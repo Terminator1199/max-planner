@@ -1,0 +1,26 @@
+{
+  "version": "2026-11-19.1",
+  "status": "unset",
+  "seasonStartDay": 1,
+  "perMonth": {
+    "builder-potion": { "free": 0, "goldPass": 0, "clanGames": 0, "other": 0 },
+    "research-potion": { "free": 0, "goldPass": 0, "clanGames": 0, "other": 0 },
+    "pet-potion": { "free": 0, "goldPass": 0, "clanGames": 0, "other": 0 },
+    "book-of-building": { "free": 0, "goldPass": 0, "clanGames": 0, "other": 0 },
+    "book-of-fighting": { "free": 0, "goldPass": 0, "clanGames": 0, "other": 0 },
+    "book-of-spells": { "free": 0, "goldPass": 0, "clanGames": 0, "other": 0 },
+    "book-of-heroes": { "free": 0, "goldPass": 0, "clanGames": 0, "other": 0 },
+    "book-of-everything": { "free": 0, "goldPass": 0, "clanGames": 0, "other": 0 },
+    "hammer-of-building": { "free": 0, "goldPass": 0, "clanGames": 0, "other": 0 },
+    "hammer-of-fighting": { "free": 0, "goldPass": 0, "clanGames": 0, "other": 0 },
+    "hammer-of-spells": { "free": 0, "goldPass": 0, "clanGames": 0, "other": 0 },
+    "hammer-of-heroes": { "free": 0, "goldPass": 0, "clanGames": 0, "other": 0 }
+  },
+  "goldPassBoostPace": [
+    { "day": 1, "pct": 10 },
+    { "day": 7, "pct": 15 },
+    { "day": 14, "pct": 20 }
+  ],
+  "source": "https://clashclock.com/guides/how-it-works",
+  "note": "Boost pace follows ClashClock's normal-pace assumption. Monthly item counts are zero until they are set from recent season posts (LLD task 1.7); every count is a default the player can edit."
+}

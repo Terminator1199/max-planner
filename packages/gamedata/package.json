@@ -5,6 +5,7 @@
   "description": "Schemas, validators and loaders for the planner's static data files.",
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./files/*": "./files/*"
   }
 }

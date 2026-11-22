@@ -1,0 +1,54 @@
+{
+  "version": "2026-11-19.1",
+  "events": [
+    {
+      "id": "hammer-jam-2026",
+      "name": "Hammer Jam",
+      "status": "confirmed",
+      "start": "2026-11-01T08:00:00Z",
+      "end": "2026-11-16T08:00:00Z",
+      "effects": [
+        {
+          "kind": "discount",
+          "timePct": 50,
+          "costPct": 50,
+          "villages": ["home"],
+          "exclude": ["supercharge", "craftedDefense", "heroEquipment"]
+        }
+      ],
+      "source": "https://gamemarket.gg/news/clash-of-clans/town-hall-19-is-coming-how-to-use-clash-of-clans-hammer-jam-now",
+      "note": "Past event, kept for tests. Exclusions also in Supercell's 2025 post: https://supercell.com/en/games/clashofclans/blog/news/hammer-jam-kickstarts-the-november-season/"
+    },
+    {
+      "id": "builder-base-bonanza-2026",
+      "name": "Builder Base Bonanza",
+      "status": "confirmed",
+      "start": "2026-05-17T08:00:00Z",
+      "end": "2026-05-31T08:00:00Z",
+      "effects": [
+        {
+          "kind": "discount",
+          "timePct": 50,
+          "costPct": 50,
+          "villages": ["builder"]
+        }
+      ],
+      "source": "https://supercell.com/en/games/clashofclans/blog/news/the-skeleton-kingdom-has-risen",
+      "note": "Past event, kept for tests. Start and end hours are assumed to be the 08:00 UTC daily reset."
+    },
+    {
+      "id": "clan-war-league",
+      "name": "Clan War League",
+      "status": "projected",
+      "recurrence": {
+        "every": "month",
+        "startDay": 1,
+        "startHourUtc": 8,
+        "lengthDays": 11
+      },
+      "effects": [{ "kind": "noHeroUpgrades" }],
+      "source": "https://clashclock.com/guides/how-it-works",
+      "note": "Players often keep heroes free for league attacks; the plan applies this only when the player switches it on."
+    }
+  ]
+}

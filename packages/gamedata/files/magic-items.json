@@ -1,0 +1,120 @@
+{
+  "version": "2026-11-19.1",
+  "items": [
+    {
+      "id": "builder-potion",
+      "name": "Builder Potion",
+      "kind": "potion",
+      "lanes": ["builder"],
+      "rateBonus": 9,
+      "seconds": 3600,
+      "holdLimit": 5,
+      "source": "https://clashofclans.fandom.com/wiki/Magic_Items/List"
+    },
+    {
+      "id": "research-potion",
+      "name": "Research Potion",
+      "kind": "potion",
+      "lanes": ["lab"],
+      "rateBonus": 23,
+      "seconds": 3600,
+      "holdLimit": 5,
+      "source": "https://clashofclans.fandom.com/wiki/Magic_Items/List"
+    },
+    {
+      "id": "pet-potion",
+      "name": "Pet Potion",
+      "kind": "potion",
+      "lanes": ["petHouse"],
+      "rateBonus": 23,
+      "seconds": 3600,
+      "holdLimit": 5,
+      "source": "https://clashofclans.fandom.com/wiki/Magic_Items/List"
+    },
+    {
+      "id": "book-of-building",
+      "name": "Book of Building",
+      "kind": "book",
+      "categories": ["defense", "army", "resource", "storage", "trap", "other"],
+      "holdLimit": 1,
+      "source": "https://clashofclans.fandom.com/wiki/Magic_Items/List"
+    },
+    {
+      "id": "book-of-fighting",
+      "name": "Book of Fighting",
+      "kind": "book",
+      "categories": ["troop", "siege"],
+      "holdLimit": 1,
+      "source": "https://clashofclans.fandom.com/wiki/Magic_Items/List"
+    },
+    {
+      "id": "book-of-spells",
+      "name": "Book of Spells",
+      "kind": "book",
+      "categories": ["spell"],
+      "holdLimit": 1,
+      "source": "https://clashofclans.fandom.com/wiki/Magic_Items/List"
+    },
+    {
+      "id": "book-of-heroes",
+      "name": "Book of Heroes",
+      "kind": "book",
+      "categories": ["hero", "pet"],
+      "holdLimit": 1,
+      "source": "https://clashofclans.fandom.com/wiki/Magic_Items/List"
+    },
+    {
+      "id": "book-of-everything",
+      "name": "Book of Everything",
+      "kind": "book",
+      "categories": [
+        "defense",
+        "army",
+        "resource",
+        "storage",
+        "trap",
+        "other",
+        "hero",
+        "troop",
+        "spell",
+        "siege",
+        "pet"
+      ],
+      "fallbackOnly": true,
+      "holdLimit": 1,
+      "source": "https://clashofclans.fandom.com/wiki/Magic_Items/List"
+    },
+    {
+      "id": "hammer-of-building",
+      "name": "Hammer of Building",
+      "kind": "hammer",
+      "categories": ["defense", "army", "resource", "storage", "trap", "other"],
+      "holdLimit": 1,
+      "source": "https://clashofclans.fandom.com/wiki/Magic_Items/List"
+    },
+    {
+      "id": "hammer-of-fighting",
+      "name": "Hammer of Fighting",
+      "kind": "hammer",
+      "categories": ["troop", "siege"],
+      "holdLimit": 1,
+      "source": "https://clashofclans.fandom.com/wiki/Magic_Items/List"
+    },
+    {
+      "id": "hammer-of-spells",
+      "name": "Hammer of Spells",
+      "kind": "hammer",
+      "categories": ["spell"],
+      "holdLimit": 1,
+      "source": "https://clashofclans.fandom.com/wiki/Magic_Items/List"
+    },
+    {
+      "id": "hammer-of-heroes",
+      "name": "Hammer of Heroes",
+      "kind": "hammer",
+      "categories": ["hero", "pet"],
+      "holdLimit": 1,
+      "source": "https://clashofclans.fandom.com/wiki/Magic_Items/List"
+    }
+  ]
+}
