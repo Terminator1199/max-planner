@@ -30,6 +30,8 @@ export class OnlineCalendar {
   private readonly intervals: [number, number][] = [];
   /** Next local day (days since 1970-01-01 in local time) to generate. */
   private nextDay: number;
+  /** UTC start of `nextDay`; every interval before it is known. Cached: Intl is slow. */
+  private generatedTo: number;
 
   constructor(options: OnlineOptions, from: number) {
     this.timeZone = options.timeZone;
@@ -61,6 +63,7 @@ export class OnlineCalendar {
     });
     if (weekly >= 7 * 1440) throw new RangeError("Offline windows cover the whole week.");
     this.nextDay = this.localDay(from) - 1;
+    this.generatedTo = this.toUtc(this.nextDay, 0);
   }
 
   isOnline(t: number): boolean {
@@ -110,7 +113,7 @@ export class OnlineCalendar {
   private ensure(t: number) {
     // A window starts on its own local day and lasts under a day, so once day D is
     // generated, every window touching a time before the start of day D + 1 is known.
-    while (this.toUtc(this.nextDay, 0) <= t + 2 * DAY) {
+    while (this.generatedTo <= t + 2 * DAY) {
       const day = this.nextDay++;
       const weekday = new Date(day * DAY * 1000).getUTCDay();
       const today: [number, number][] = [];
@@ -125,6 +128,7 @@ export class OnlineCalendar {
         if (last && iv[0] <= last[1]) last[1] = Math.max(last[1], iv[1]);
         else this.intervals.push(iv);
       }
+      this.generatedTo = this.toUtc(this.nextDay, 0);
     }
   }
 

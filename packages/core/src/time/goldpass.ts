@@ -68,10 +68,24 @@ export function goldPassDiscount(
   const lanes = new Set<Lane>(options.lanes ?? ["builder", "lab"]);
   if (options.currentPct !== undefined) checkPct(options.currentPct);
   for (const p of options.pace) checkPct(p.pct);
+  // The percentage only changes at a day boundary within the season, so the scheduler's
+  // many lookups reuse the last day's answer.
+  const hour = options.seasonStartHourUtc ?? 8;
+  let cached = { from: Infinity, to: -Infinity, discount: NO_DISCOUNT as Discount };
   return (step, t) => {
     if (!lanes.has(step.lane)) return NO_DISCOUNT;
-    const pct = goldPassPctAt(options, from, t);
-    return pct === 0 ? NO_DISCOUNT : { timePct: pct, costPct: pct };
+    if (t < cached.from || t >= cached.to) {
+      const season = seasonStartAt(t, options.seasonStartDay, hour);
+      const dayStart = season + Math.floor((t - season) / DAY) * DAY;
+      const pct = goldPassPctAt(options, from, t);
+      cached = {
+        from: dayStart,
+        // A typed-in percentage ends with its season, which is also a boundary here.
+        to: Math.min(dayStart + DAY, nextSeasonStart(t, options.seasonStartDay, hour)),
+        discount: pct === 0 ? NO_DISCOUNT : { timePct: pct, costPct: pct },
+      };
+    }
+    return cached.discount;
   };
 }
 

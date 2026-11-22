@@ -1,0 +1,37 @@
+{
+  "synthetic-th2/offense/th2": {
+    "hash": "8b4f5abb2eabe46535d4b0584a10fbf737c43d69c8348509fc13b71e67fe42cf",
+    "finishSeconds": 6600,
+    "note": "First golden plans for the plan search."
+  },
+  "synthetic-th2/offense/th3": {
+    "hash": "cf38c945ec761e9b0840ae9ae2442cb3f7338c9676574f9843b6a4f9242962c5",
+    "finishSeconds": 95100,
+    "note": "First golden plans for the plan search."
+  },
+  "synthetic-th2/balanced/th2": {
+    "hash": "8b4f5abb2eabe46535d4b0584a10fbf737c43d69c8348509fc13b71e67fe42cf",
+    "finishSeconds": 6600,
+    "note": "First golden plans for the plan search."
+  },
+  "synthetic-th2/balanced/th3": {
+    "hash": "cf38c945ec761e9b0840ae9ae2442cb3f7338c9676574f9843b6a4f9242962c5",
+    "finishSeconds": 95100,
+    "note": "First golden plans for the plan search."
+  },
+  "synthetic-th2/defense/th2": {
+    "hash": "185eb76bdc8dc406f24e2d277503d98b7ce27a12429a13567f679cc07a81d1aa",
+    "finishSeconds": 6600,
+    "note": "First golden plans for the plan search."
+  },
+  "synthetic-th2/defense/th3": {
+    "hash": "cf38c945ec761e9b0840ae9ae2442cb3f7338c9676574f9843b6a4f9242962c5",
+    "finishSeconds": 95100,
+    "note": "First golden plans for the plan search."
+  },
+  "synthetic-th2/balanced/th3/offline-goldpass": {
+    "hash": "e385b36d13f1a8f0aeb904330d4ce542f04ec2da54da6156cef7820ba81044cf",
+    "finishSeconds": 89120,
+    "note": "First golden plans for the plan search."
+  }
+}
