@@ -1,0 +1,10 @@
+{
+  "name": "@max-planner/gamedata",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Schemas, validators and loaders for the planner's static data files.",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  }
+}

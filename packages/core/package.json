@@ -1,0 +1,13 @@
+{
+  "name": "@max-planner/core",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Export parser, remaining-work calculator and scheduler. Pure TypeScript, no DOM or network.",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@max-planner/gamedata": "workspace:*"
+  }
+}

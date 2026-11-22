@@ -1,0 +1,23 @@
+{
+  "name": "max-planner",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Static web app that plans how many days a Clash of Clans village needs to max, from a pasted in-game export.",
+  "type": "module",
+  "packageManager": "pnpm@10.28.0",
+  "engines": {
+    "node": ">=22.18.0"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "node --test --test-reporter=spec \"packages/*/src/**/*.test.ts\"",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "check": "pnpm typecheck && pnpm test && pnpm format:check"
+  },
+  "devDependencies": {
+    "@types/node": "^22.18.0",
+    "prettier": "^3.6.0",
+    "typescript": "^7.0.0"
+  }
+}
