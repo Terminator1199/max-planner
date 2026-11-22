@@ -1,0 +1,164 @@
+{
+  "tag": "#FIXTURE02",
+  "timestamp": 1795000000,
+  "helpers": [
+    {
+      "data": 93000000,
+      "lvl": 3,
+      "helper_cooldown": 30304
+    },
+    {
+      "data": 93000001,
+      "lvl": 1
+    },
+    {
+      "data": 93000002,
+      "lvl": 2
+    },
+    {
+      "data": 93000003,
+      "lvl": 1,
+      "helper_cooldown": 30304
+    }
+  ],
+  "guardians": [
+    {
+      "data": 107000000,
+      "lvl": 2,
+      "timer": 5000,
+      "helper_timer": 0,
+      "helper_recurrent": false
+    }
+  ],
+  "buildings": [
+    {
+      "data": 9000001,
+      "lvl": 2,
+      "weapon": 1
+    },
+    {
+      "data": 9000002,
+      "lvl": 1,
+      "cnt": 2
+    },
+    {
+      "data": 9000005,
+      "lvl": 1
+    },
+    {
+      "data": 9000003,
+      "lvl": 2,
+      "cnt": 1,
+      "supercharge": 1
+    },
+    {
+      "data": 9000003,
+      "lvl": 1,
+      "timer": 300
+    },
+    {
+      "data": 9000004,
+      "lvl": 2,
+      "cnt": 2
+    },
+    {
+      "data": 9000010,
+      "lvl": 1,
+      "timer": 2000,
+      "helper_recurrent": true
+    },
+    {
+      "data": 9000010,
+      "types": [
+        {
+          "data": 103000011,
+          "modules": [
+            {
+              "data": 102000033,
+              "lvl": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "data": 9000011,
+      "lvl": 2,
+      "timer": 3000,
+      "gear_up": 1
+    },
+    {
+      "data": 9000020,
+      "lvl": 1
+    },
+    {
+      "data": 9000020,
+      "lvl": 1,
+      "timer": 600,
+      "extra": true
+    },
+    {
+      "data": 9000050,
+      "lvl": 1,
+      "cnt": 20
+    }
+  ],
+  "traps": [
+    {
+      "data": 9000012,
+      "lvl": 1,
+      "cnt": 2
+    }
+  ],
+  "decos": [
+    {
+      "data": 18000000,
+      "cnt": 1
+    }
+  ],
+  "obstacles": [
+    {
+      "data": 8000000,
+      "cnt": 3
+    }
+  ],
+  "units": [
+    {
+      "data": 9000030,
+      "lvl": 1,
+      "timer": 2000,
+      "helper_recurrent": true
+    }
+  ],
+  "siege_machines": [],
+  "heroes": [],
+  "spells": [],
+  "pets": [],
+  "equipment": [
+    {
+      "data": 90000000,
+      "lvl": 5
+    }
+  ],
+  "house_parts": [82000000, 82000001],
+  "skins": [52000026],
+  "sceneries": [60000082],
+  "buildings2": [
+    {
+      "data": 1000033,
+      "lvl": 3,
+      "cnt": 1
+    }
+  ],
+  "traps2": [],
+  "decos2": [],
+  "obstacles2": [],
+  "units2": [],
+  "heroes2": [],
+  "skins2": [],
+  "sceneries2": [],
+  "boosts": {
+    "lab_boost": 3059,
+    "clocktower_cooldown": 72498
+  }
+}

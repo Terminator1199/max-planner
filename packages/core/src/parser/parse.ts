@@ -12,7 +12,9 @@ export type WarningCode =
   | "supercharge_excluded"
   | "above_cap"
   | "multiple_town_halls"
-  | "stale_export";
+  | "stale_export"
+  | "crafted_excluded"
+  | "weapon_excluded";
 
 export interface ImportWarning {
   code: WarningCode;
@@ -130,6 +132,16 @@ export function parseExport(text: string, gd: GameData, options: ParseOptions = 
       }
       const id = r[ROW_FIELDS.id];
       const level = r[ROW_FIELDS.level];
+      // Crafted defenses list their modules instead of a level.
+      if (isInt(id, 1) && r[ROW_FIELDS.types] !== undefined && level === undefined) {
+        warnOnce(`crafted:${id}`, {
+          code: "crafted_excluded",
+          section: key,
+          entityId: id,
+          message: `${gd.entity(id)?.name ?? `Building ${id}`}: crafted defense modules are not planned yet.`,
+        });
+        return;
+      }
       if (!isInt(id, 1) || !isInt(level, 0)) {
         report.warnings.push({
           code: "bad_row",
@@ -164,6 +176,15 @@ export function parseExport(text: string, gd: GameData, options: ParseOptions = 
         if (existing) existing.count += copies;
         else walls.set(wallKey, { entityId: id, level, count: copies });
         return;
+      }
+
+      if (r[ROW_FIELDS.weapon] !== undefined) {
+        warnOnce(`weapon:${id}`, {
+          code: "weapon_excluded",
+          section: key,
+          entityId: id,
+          message: `${entity.name}: weapon levels are not planned yet.`,
+        });
       }
 
       const idle = (n: number) => {
