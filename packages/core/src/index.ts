@@ -22,3 +22,30 @@ export {
   type Totals,
   type Unplannable,
 } from "./calc/remaining.ts";
+export {
+  simulate,
+  compareIds,
+  type DiscountSource,
+  type HallDates,
+  type Plan,
+  type PlacedStep,
+  type Reason,
+  type SimulateOptions,
+  type Worker,
+} from "./sched/simulate.ts";
+export { STRATEGIES, WEIGHTS, type Strategy } from "./sched/weights.ts";
+export {
+  discountedCost,
+  discountedSeconds,
+  combinedPct,
+  NO_DISCOUNT,
+  type Discount,
+} from "./time/rounding.ts";
+export {
+  goldPassDiscount,
+  goldPassPctAt,
+  nextSeasonStart,
+  seasonStartAt,
+  type GoldPassOptions,
+} from "./time/goldpass.ts";
+export { OnlineCalendar, type OfflineRule, type OnlineOptions } from "./time/online.ts";
