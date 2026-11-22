@@ -9,11 +9,12 @@
     "node": ">=22.18.0"
   },
   "scripts": {
-    "typecheck": "tsc -p tsconfig.json",
-    "test": "node --test --test-reporter=spec \"packages/*/src/**/*.test.ts\"",
+    "typecheck": "tsc -p tsconfig.json && tsc -p apps/preview/tsconfig.json",
+    "test": "node --test --test-reporter=spec \"packages/*/src/**/*.test.ts\" \"tools/*/src/**/*.test.ts\" \"apps/*/src/**/*.test.ts\"",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "check": "pnpm typecheck && pnpm test && pnpm format:check"
+    "check": "pnpm typecheck && pnpm test && pnpm format:check",
+    "preview:build": "node tools/preview-build/src/build.ts"
   },
   "devDependencies": {
     "@types/node": "^22.18.0",
