@@ -33,6 +33,11 @@ Work arrives as a stack of pull requests, each one reviewable on its own:
 | 11  | Real game data from ClashKing, merges, helpers             |
 | 12  | The website: paste, plan, boosters, compare, saved exports |
 | 13  | Gems: finishing upgrades with gems in the plan             |
+| 14  | Redesign: game-flavoured look and a real landing page      |
+| 15  | Squads planned; Crafting Station named in the report       |
+| 16  | Boosters tab: a bar with the updated date                  |
+| 17  | Timeline: item icons, readable dates                       |
+| 18  | Deployment to GitHub Pages; GPL-3.0 licence                |
 
 ## Layout
 
@@ -51,8 +56,12 @@ fixtures/     sample game data, anonymised exports, golden plan hashes
 ## The website
 
 One self-contained HTML file: the app, the planner (run in a Web Worker, or on the page if the
-browser blocks workers) and the game data are all inside it. It makes no network requests.
+browser blocks workers) and the game data are all inside it. It makes no network requests
+beyond Google Fonts.
 
+- Live: GitHub Pages, deployed by `.github/workflows/pages.yml` on every push to `main`, at
+  `https://terminator1199.github.io/max-planner/` once the repository is public and Pages is
+  set to deploy from GitHub Actions.
 - From a CI run: open the latest run under the repository's Actions tab, download the `website`
   artifact, then open `index.html`.
 - Locally: `pnpm install && pnpm web:build`, then open `dist/web/index.html`. It works straight
@@ -88,6 +97,12 @@ Engineering choices worth knowing:
 - **No build step for the core packages.** Node 22.18+ strips TypeScript types natively, so tests and tools run the `.ts` sources directly. The code uses erasable syntax only (no enums, namespaces or parameter properties), which `tsconfig.json` enforces.
 - **Node's built-in test runner** (`node:test`) instead of Vitest, so the core has zero runtime and test dependencies.
 - **Hand-written validators** for the data files instead of Zod, for the same reason. They are small and fully tested.
+
+## Licence
+
+GPL-3.0-or-later; see `LICENSE`. The game data in `packages/gamedata/files/gamedata.json` is
+built from ClashKing's GPL-3.0 static data, and the website bundles it, so the whole project is
+under the GPL. Its notice and credit stay with the data in `packages/gamedata/files/`.
 
 ## Disclaimer
 

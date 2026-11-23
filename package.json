@@ -2,6 +2,7 @@
   "name": "max-planner",
   "version": "0.0.0",
   "private": true,
+  "license": "GPL-3.0-or-later",
   "description": "Static web app that plans how many days a Clash of Clans village needs to max, from a pasted in-game export.",
   "type": "module",
   "packageManager": "pnpm@10.28.0",
