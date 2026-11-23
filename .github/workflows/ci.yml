@@ -35,11 +35,11 @@ jobs:
       - name: Format
         run: pnpm format:check
 
-      - name: Build preview
-        run: pnpm preview:build
+      - name: Build website
+        run: pnpm web:build
 
-      - name: Upload preview
+      - name: Upload website
         uses: actions/upload-artifact@v4
         with:
-          name: preview
-          path: dist/preview/index.html
+          name: website
+          path: dist/web/index.html

@@ -149,3 +149,39 @@ test("items are planned twice, with and without, and the saving is the differenc
   assert.equal(result.savedSeconds, 9 * H);
   assert.deepEqual(result.withoutItems.plan.itemUses, []);
 });
+
+test("a replayed winner gives back the same plan", () => {
+  const rng = mulberry32(5);
+  const rgd = randomGameData(rng);
+  const village = randomVillage(rng, rgd, 1, T0);
+  const work = remainingWork(village, rgd, { targetTownHall: rgd.maxTownHall });
+  const first = searchPlan(work, village, rgd, { seed: 2, variants: 8 });
+  const replay = searchPlan(work, village, rgd, {
+    seed: 2,
+    variants: 0,
+    targetRuns: 0,
+    alsoTry: [first.params],
+  });
+  assert.equal(replay.plan.finish, first.plan.finish);
+  assert.equal(replay.hash, first.hash);
+});
+
+test("items never make the reported plan slower", () => {
+  for (let seed = 1; seed <= 30; seed++) {
+    const rng = mulberry32(seed);
+    const rgd = randomGameData(rng);
+    const village = randomVillage(rng, rgd, 1, T0);
+    const work = remainingWork(village, rgd, { targetTownHall: rgd.maxTownHall });
+    const boosters = {
+      items: magicItems(),
+      arrivals: [
+        { item: "builder-potion", at: T0, count: 2, source: "stock" as const },
+        { item: "book-of-building", at: T0, count: 1, source: "stock" as const },
+      ],
+    };
+    const r = searchWithItems(work, village, rgd, { seed, variants: 6, boosters });
+    assert.ok(r.savedSeconds >= 0, `seed ${seed}: items made it slower`);
+    assert.equal(r.savedSeconds, r.withoutItems.plan.finish - r.withItems.plan.finish);
+    if (!r.itemsHelp) assert.equal(r.withItems, r.withoutItems);
+  }
+});

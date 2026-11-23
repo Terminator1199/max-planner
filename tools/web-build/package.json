@@ -1,5 +1,5 @@
 {
-  "name": "@max-planner/preview-build",
+  "name": "@max-planner/web-build",
   "version": "0.0.0",
   "private": true,
   "type": "module",

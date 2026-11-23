@@ -90,3 +90,5 @@ export {
   HELPER_PERIOD,
   HELPER_LENGTH,
 } from "./boost/helpers.ts";
+export { progress, type Progress } from "./calc/progress.ts";
+export { compareVillages, type Comparison, type EntityChange } from "./compare/compare.ts";

@@ -26,9 +26,20 @@ export interface SearchOptions extends Omit<SimulateOptions, "targetFinish" | "s
    * little time for, say, heroes first.
    */
   toleranceSeconds?: number;
+  /**
+   * Runs to make after the base runs, such as the winner of another search. The item
+   * search replays the no-item winner this way, so items are judged on the same order.
+   */
+  alsoTry?: RunParams[];
 }
 
-export type RunKind = "chain" | "target" | "variant";
+export type RunKind = "chain" | "target" | "variant" | "replay";
+
+/** What makes one run differ from another: its target and the decisions it swaps. */
+export interface RunParams {
+  targetFinish: number;
+  swaps: number[];
+}
 
 export interface SearchResult {
   plan: Plan;
@@ -36,6 +47,8 @@ export interface SearchResult {
   hash: string;
   /** Which kind of run produced the plan. */
   foundBy: RunKind;
+  /** The winning run's target and swaps, to replay it with other options. */
+  params: RunParams;
   /** Finish of the longest-chain-first run. */
   chainFinish: number;
   /** Earliest finish of any run. Equals `plan.finish` unless a tolerance traded time. */
@@ -80,14 +93,15 @@ export function searchPlan(
     budgetMs = 1500,
     onProgress,
     toleranceSeconds = 0,
+    alsoTry = [],
     ...base
   } = options;
   /** Runs that may still win: within the tolerance of the fastest so far. */
-  let pool: { plan: Plan; kind: RunKind; targetFinish: number }[] = [];
+  let pool: { plan: Plan; kind: RunKind; targetFinish: number; swaps: number[] }[] = [];
   let fastest = Infinity;
-  const offer = (plan: Plan, kind: RunKind, targetFinish: number) => {
+  const offer = (plan: Plan, kind: RunKind, targetFinish: number, swaps: number[] = []) => {
     fastest = Math.min(fastest, plan.finish);
-    pool.push({ plan, kind, targetFinish });
+    pool.push({ plan, kind, targetFinish, swaps });
     pool = pool.filter((c) => c.plan.finish <= fastest + toleranceSeconds);
   };
   /** Most value within the tolerance; then the earlier finish; then the earlier run. */
@@ -99,7 +113,7 @@ export function searchPlan(
         : a,
     );
   const startedAt = clock?.();
-  const planned = 1 + targetRuns + variants;
+  const planned = 1 + targetRuns + alsoTry.length + variants;
   let runs = 0;
   let stoppedEarly = false;
   const outOfTime = () => {
@@ -108,7 +122,7 @@ export function searchPlan(
     stoppedEarly = true;
     return true;
   };
-  const run = (extra: Pick<SimulateOptions, "targetFinish" | "swaps">) => {
+  const run = (extra: { targetFinish: number; swaps?: Set<number> }) => {
     const plan = simulate(work, village, gd, { ...base, ...extra });
     runs++;
     onProgress?.(Math.min(1, runs / planned));
@@ -132,7 +146,13 @@ export function searchPlan(
     target = finish;
   }
 
-  // 3. Variants around the base run that would win now.
+  // 3. Replays asked for by the caller. Not cut by the budget: there are only a few.
+  for (const p of alsoTry) {
+    const swaps = new Set(p.swaps);
+    offer(run({ targetFinish: p.targetFinish, swaps }), "replay", p.targetFinish, p.swaps);
+  }
+
+  // 4. Variants around the base run that would win now.
   const base0 = pick();
   const rng = mulberry32(seed);
   const decisions = Math.max(1, base0.plan.decisions);
@@ -140,7 +160,9 @@ export function searchPlan(
     const swaps = new Set<number>();
     const count = rng.int(1, 3);
     for (let j = 0; j < count; j++) swaps.add(rng.int(0, decisions - 1));
-    offer(run({ targetFinish: base0.targetFinish, swaps }), "variant", base0.targetFinish);
+    offer(run({ targetFinish: base0.targetFinish, swaps }), "variant", base0.targetFinish, [
+      ...swaps,
+    ]);
   }
   onProgress?.(1);
   const best = pick();
@@ -149,6 +171,7 @@ export function searchPlan(
     plan: best.plan,
     hash: planHash(best.plan),
     foundBy: best.kind,
+    params: { targetFinish: best.targetFinish, swaps: best.swaps },
     chainFinish: chain.finish,
     fastestFinish: fastest,
     runs,
@@ -165,11 +188,19 @@ export function planHash(plan: Plan): string {
 export interface ItemSavings {
   withItems: SearchResult;
   withoutItems: SearchResult;
-  /** How much sooner the plan finishes with items; what the booster page shows. */
+  /** How much sooner the plan finishes with items; what the booster page shows. Never negative. */
   savedSeconds: number;
+  /** False when no plan with items beat the plan without them, so `withItems` is that plan. */
+  itemsHelp: boolean;
 }
 
-/** Every plan runs twice, with items and without, so the page can show both dates. */
+/**
+ * Every plan runs twice, with items and without, so the page can show both dates. The item
+ * search also replays the no-item winner with items, so items are judged on the same order
+ * rather than on two searches' luck. A plan with items is never reported slower than the
+ * plan without them: if items cannot bring the finish forward, the plan without them stands
+ * and `itemsHelp` is false.
+ */
 export function searchWithItems(
   work: RemainingWork,
   village: Village,
@@ -178,10 +209,18 @@ export function searchWithItems(
 ): ItemSavings {
   const { boosters, ...rest } = options;
   const withoutItems = searchPlan(work, village, gd, rest);
-  const withItems = boosters ? searchPlan(work, village, gd, options) : withoutItems;
+  if (!boosters)
+    return { withItems: withoutItems, withoutItems, savedSeconds: 0, itemsHelp: false };
+  const tried = searchPlan(work, village, gd, {
+    ...options,
+    alsoTry: [...(options.alsoTry ?? []), withoutItems.params],
+  });
+  const itemsHelp = !betterPlan(withoutItems.plan, tried.plan);
+  const withItems = itemsHelp ? tried : withoutItems;
   return {
     withItems,
     withoutItems,
     savedSeconds: withoutItems.plan.finish - withItems.plan.finish,
+    itemsHelp,
   };
 }
