@@ -143,6 +143,7 @@ function replan(delay = 80) {
   if (!state.text) return;
   state.planning = true;
   renderHeadline();
+  renderBoostBar();
   planTimer = window.setTimeout(async () => {
     const seq = ++planSeq;
     const input: PlanInput = {
@@ -895,6 +896,35 @@ function renderItems() {
   renderGems(r);
   renderBoosters(r);
   renderEvents(r);
+  renderBoostBar();
+}
+
+/** Stays in view on the booster page: the max date now, what boosts save, and the way back. */
+function renderBoostBar() {
+  const el = document.getElementById("boost-bar");
+  if (!el) return;
+  const r = ok();
+  if (!state.text || !r) {
+    el.innerHTML =
+      state.text && state.planning
+        ? `<div><p><b class="busy">Updating your plan</b></p></div>`
+        : "";
+    return;
+  }
+  const maxed = r.plan.halls.at(-1)?.maxedAt ?? r.plan.finish;
+  const saved = r.withoutItemsMaxedAt - maxed;
+  const what = r.hasItems && r.hasGems ? "items and gems" : r.hasGems ? "gems" : "items";
+  const line = state.planning
+    ? `<span class="busy">Updating with your changes</span>`
+    : saved > 0
+      ? `<span class="saved-by">${span(saved)} sooner with your ${what}</span>`
+      : r.hasItems || r.hasGems
+        ? `<span class="same">Your ${what} don't move the date yet</span>`
+        : `<span class="same">Add items or gems above to bring it forward</span>`;
+  el.innerHTML = `<div>
+    <p><span>Town Hall ${r.target} maxed</span><b>${esc(dateLong(maxed))}</b>${line}</p>
+    <a class="button primary" href="#plan">See the updated plan</a>
+  </div>`;
 }
 
 function renderGems(r: Ok | null) {
