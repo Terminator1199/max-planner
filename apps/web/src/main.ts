@@ -256,7 +256,8 @@ function gemsTile(r: Ok) {
     return `<a class="stat good" href="#items"><span>Gems save</span><b>${span(r.gemsSaved)}</b></a>`;
   return `<a class="stat" href="#items" title="No upgrade on the path that sets your max date is long or cheap enough for your gems yet."><span>Gems</span><b>No change</b></a>`;
 }
-const gemGlyph = `<svg class="glyph" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4h10l4 5-9 11L3 9z" fill="var(--gem)" opacity=".9"/><path d="M3 9h18M9 4l3 16M15 4l-3 16" stroke="var(--surface)" stroke-width="1" fill="none" opacity=".7"/></svg>`;
+const gemBody = `<path d="M7 4h10l4 5-9 11L3 9z" fill="var(--gem)" opacity=".9"/><path d="M3 9h18M9 4l3 16M15 4l-3 16" stroke="var(--surface)" stroke-width="1" fill="none" opacity=".7"/>`;
+const gemGlyph = `<svg class="glyph" viewBox="0 0 24 24" aria-hidden="true">${gemBody}</svg>`;
 const itemName = (id: string) => items.find((i) => i.id === id)?.name ?? id;
 
 function stepName(g: GameData, p: { entityId: number; instance: number; toLevel: number }) {
@@ -272,6 +273,11 @@ function workerName(plan: Plan, index: number | null) {
 }
 
 function glyph(item: MagicItem): string {
+  return `<svg class="glyph" viewBox="0 0 24 24" aria-hidden="true">${glyphBody(item)}</svg>`;
+}
+
+/** The inside of an item's 24×24 icon, to draw it in a page or inside a chart. */
+function glyphBody(item: MagicItem): string {
   const tone =
     item.kind === "potion"
       ? item.lanes?.[0] === "lab"
@@ -292,7 +298,7 @@ function glyph(item: MagicItem): string {
       : item.kind === "book"
         ? `<rect x="5" y="3" width="14" height="18" rx="2" fill="${tone}" opacity=".9"/><path d="M8 3v18" stroke="var(--surface)" stroke-width="1.5"/>`
         : `<rect x="4" y="4" width="13" height="6" rx="1.5" fill="${tone}" opacity=".9"/><rect x="9.5" y="9" width="3" height="12" rx="1" fill="var(--ink)" opacity=".75"/>`;
-  return `<svg class="glyph" viewBox="0 0 24 24" aria-hidden="true">${body}</svg>`;
+  return body;
 }
 
 const $ = (id: string) => document.getElementById(id)!;
@@ -688,21 +694,24 @@ function renderTimeline(r: Ok) {
   // Rows from the top: dates, then item and gem uses if there are any, then the workers.
   const dateH = 22;
   const marks = [
-    ...plan.itemUses.map((u) => ({
-      at: u.at,
-      cls: `use ${u.kind}`,
-      title: `${itemName(u.item)}: ${when(u.at)}, saves ${span(u.savedSeconds)}`,
-    })),
+    ...plan.itemUses.map((u) => {
+      const item = items.find((i) => i.id === u.item);
+      return {
+        at: u.at,
+        body: item ? glyphBody(item) : "",
+        title: `${itemName(u.item)}: ${when(u.at)}, saves ${span(u.savedSeconds)}`,
+      };
+    }),
     ...plan.gemUses.map((g) => {
       const step = plan.steps.find((s) => s.id === g.stepId);
       return {
         at: g.at,
-        cls: "use gem",
+        body: gemBody,
         title: `${num.format(g.gems)} gems${step ? ` on ${stepName(gd, step)}` : ""}: ${when(g.at)}, saves ${span(g.savedSeconds)}`,
       };
     }),
   ];
-  const markH = marks.length ? 26 : 0;
+  const markH = marks.length ? 30 : 0;
   const top = dateH + markH + 6;
   const lanes = plan.workers
     .map((_, i) => i)
@@ -760,10 +769,15 @@ function renderTimeline(r: Ok) {
     parts.push(
       `<text class="row-label" x="0" y="${cy + 4}">${both ? "Items, gems" : plan.gemUses.length ? "Gems used" : "Items used"}</text>`,
     );
-    for (const m of marks) {
-      const mx = x(m.at);
+    // Each use is drawn as its item's icon. Icons that would overlap are nudged right so
+    // each stays readable; the tooltip gives the exact time.
+    const size = 18;
+    let lastX = -Infinity;
+    for (const m of [...marks].sort((a, b) => a.at - b.at)) {
+      const mx = Math.max(x(m.at) - size / 2, lastX + size + 3);
+      lastX = mx;
       parts.push(
-        `<path class="${m.cls}" d="M${mx} ${cy - 7} l6 7 -6 7 -6 -7z"><title>${esc(m.title)}</title></path>`,
+        `<g class="mark"><title>${esc(m.title)}</title><rect class="mark-bg" x="${mx - 1}" y="${cy - size / 2 - 1}" width="${size + 2}" height="${size + 2}" rx="5"/><svg x="${mx}" y="${cy - size / 2}" width="${size}" height="${size}" viewBox="0 0 24 24">${m.body}</svg></g>`,
       );
     }
   }
@@ -811,8 +825,12 @@ function renderTimeline(r: Ok) {
     shown.night ? `<span><i class="key night"></i>Offline</span>` : "",
     shown.sale ? `<span><i class="key sale"></i>Event discount</span>` : "",
     shown.block ? `<span><i class="key hold"></i>No hero upgrades</span>` : "",
-    plan.itemUses.length ? `<span><i class="key use"></i>Item used</span>` : "",
-    plan.gemUses.length ? `<span><i class="key gem"></i>Gems used</span>` : "",
+    plan.itemUses.length
+      ? `<span><svg class="key-icon" viewBox="0 0 24 24" aria-hidden="true">${glyphBody(items.find((i) => i.id === plan.itemUses[0]!.item) ?? items[0]!)}</svg>Item used</span>`
+      : "",
+    plan.gemUses.length
+      ? `<span><svg class="key-icon" viewBox="0 0 24 24" aria-hidden="true">${gemBody}</svg>Gems used</span>`
+      : "",
   ];
   host.innerHTML = `
     <div class="timeline-bar">
