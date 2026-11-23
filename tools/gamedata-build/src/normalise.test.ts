@@ -206,12 +206,26 @@ test("counts add up per hall; merges and hall upgrades consume their sources", (
   assert.deepEqual(count(1000064), [0, 0, 0]);
 });
 
-test("left out: Builder Base, crafted modules, super troops and squads", () => {
+test("left out: Builder Base, crafted modules and super troops", () => {
   const { file, skipped } = normalise(ck, meta);
   const ids = new Set(file.entities.map((e) => e.id));
-  for (const id of [1000033, 1000097, 4000026, 4000195])
-    assert.ok(!ids.has(id), `${id} should be left out`);
-  assert.deepEqual(skipped.map((s) => s.id).sort(), [1000097, 4000026, 4000195]);
+  for (const id of [1000033, 1000097, 4000026]) assert.ok(!ids.has(id), `${id} should be left out`);
+  assert.deepEqual(skipped.map((s) => s.id).sort(), [1000097, 4000026]);
+});
+
+test("squads are researched in the Laboratory like troops", () => {
+  const { file } = normalise(ck, meta);
+  const squad = file.entities.find((e) => e.id === 4000195)!;
+  assert.equal(squad.lane, "lab");
+  assert.equal(squad.category, "troop");
+  // Costs shift one level: level 2 costs what the source lists on level 1.
+  assert.deepEqual(
+    squad.levels.map((l) => [l.level, l.cost, l.seconds]),
+    [
+      [1, 0, 0],
+      [2, 10, 10],
+    ],
+  );
 });
 
 test("the result validates and loads", () => {
