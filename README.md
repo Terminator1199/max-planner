@@ -10,6 +10,8 @@ What it does:
 - An upgrade order per worker that respects the player's offline hours and time zone.
 - The Builder's Apprentice and Lab Assistant from the export, and the Gold Pass.
 - Magic items (potions, books, hammers) in stock and expected each month, and the time they save.
+- Gems in hand and earned each month, spent finishing the upgrades that set the max date, at the
+  game's price of time, and the time they save.
 - Announced events such as Hammer Jam applied to the plan; estimated ones can be switched on.
 - Comparison of two exports: every level gained and how the days to max moved.
 - Exports and settings are kept in the browser only, so a player can come back and compare.
@@ -30,6 +32,7 @@ Work arrives as a stack of pull requests, each one reviewable on its own:
 | 9   | Preview page: the real planner on a made-up demo village   |
 | 11  | Real game data from ClashKing, merges, helpers             |
 | 12  | The website: paste, plan, boosters, compare, saved exports |
+| 13  | Gems: finishing upgrades with gems in the plan             |
 
 ## Layout
 

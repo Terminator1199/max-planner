@@ -4,7 +4,7 @@ import { remainingWork } from "../calc/remaining.ts";
 import { T0, fakeVillage, fakeWork, magicItems, sampleGameData } from "../test-support.ts";
 import { randomGameData, randomVillage } from "../test-random.ts";
 import { mulberry32 } from "./prng.ts";
-import { betterPlan, planHash, searchPlan, searchWithItems } from "./search.ts";
+import { betterPlan, planHash, searchPlan, searchWithBoosts, searchWithItems } from "./search.ts";
 import { simulate } from "./simulate.ts";
 
 const H = 3600;
@@ -184,4 +184,32 @@ test("items never make the reported plan slower", () => {
     assert.equal(r.savedSeconds, r.withoutItems.plan.finish - r.withItems.plan.finish);
     if (!r.itemsHelp) assert.equal(r.withItems, r.withoutItems);
   }
+});
+
+test("items, then gems, each only ever bring the finish forward", () => {
+  let gemsHelped = 0;
+  for (let seed = 1; seed <= 20; seed++) {
+    const rng = mulberry32(seed);
+    const rgd = randomGameData(rng);
+    const village = randomVillage(rng, rgd, 1, T0);
+    const work = remainingWork(village, rgd, { targetTownHall: rgd.maxTownHall });
+    const boosters = {
+      items: magicItems(),
+      arrivals: [{ item: "builder-potion", at: T0, count: 1, source: "stock" as const }],
+    };
+    const gems = { stock: 3000, perMonth: 1500, reserve: 0, minDays: 1 };
+    const r = searchWithBoosts(work, village, rgd, { seed, variants: 4, boosters, gems });
+    assert.ok(r.items.plan.finish <= r.plain.plan.finish, `seed ${seed}: items slower`);
+    assert.ok(r.all.plan.finish <= r.items.plan.finish, `seed ${seed}: gems slower`);
+    assert.equal(r.itemsSaved, r.plain.plan.finish - r.items.plan.finish);
+    assert.equal(r.gemsSaved, r.items.plan.finish - r.all.plan.finish);
+    if (!r.gemsHelp) assert.equal(r.all, r.items);
+    else assert.ok(r.all.plan.gemsSpent > 0 || r.gemsSaved === 0);
+    if (r.gemsSaved > 0) gemsHelped++;
+    // Without gems, the third search is skipped.
+    const none = searchWithBoosts(work, village, rgd, { seed, variants: 4, boosters });
+    assert.equal(none.all, none.items);
+    assert.deepEqual(none.all.plan.gemUses, []);
+  }
+  assert.ok(gemsHelped > 0, "gems never helped");
 });

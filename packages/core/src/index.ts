@@ -28,6 +28,7 @@ export {
   type DiscountSource,
   type HallDates,
   type HelperBoost,
+  type GemUse,
   type ItemUse,
   type Plan,
   type PlacedStep,
@@ -54,9 +55,12 @@ export { OnlineCalendar, type OfflineRule, type OnlineOptions } from "./time/onl
 export {
   searchPlan,
   searchWithItems,
+  searchWithBoosts,
   planHash,
   betterPlan,
   type ItemSavings,
+  type BoostSavings,
+  type RunParams,
   type RunKind,
   type SearchOptions,
   type SearchResult,
@@ -90,5 +94,14 @@ export {
   HELPER_PERIOD,
   HELPER_LENGTH,
 } from "./boost/helpers.ts";
+export {
+  gemCost,
+  gemsEarned,
+  hasGems,
+  GEM_RATES,
+  DEFAULT_GEMS,
+  MONTH_SECONDS,
+  type GemSettings,
+} from "./boost/gems.ts";
 export { progress, type Progress } from "./calc/progress.ts";
 export { compareVillages, type Comparison, type EntityChange } from "./compare/compare.ts";
