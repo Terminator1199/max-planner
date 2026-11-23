@@ -685,47 +685,87 @@ function renderTimeline(r: Ok) {
   const labelW = 104;
   const rowH = 26;
   const gap = 6;
-  const top = 34;
+  // Rows from the top: dates, then item and gem uses if there are any, then the workers.
+  const dateH = 22;
+  const marks = [
+    ...plan.itemUses.map((u) => ({
+      at: u.at,
+      cls: `use ${u.kind}`,
+      title: `${itemName(u.item)}: ${when(u.at)}, saves ${span(u.savedSeconds)}`,
+    })),
+    ...plan.gemUses.map((g) => {
+      const step = plan.steps.find((s) => s.id === g.stepId);
+      return {
+        at: g.at,
+        cls: "use gem",
+        title: `${num.format(g.gems)} gems${step ? ` on ${stepName(gd, step)}` : ""}: ${when(g.at)}, saves ${span(g.savedSeconds)}`,
+      };
+    }),
+  ];
+  const markH = marks.length ? 26 : 0;
+  const top = dateH + markH + 6;
   const lanes = plan.workers
     .map((_, i) => i)
     .filter((i) => plan.steps.some((p) => p.worker === i || p.holds === i));
-  const height = top + lanes.length * (rowH + gap) + 10;
+  const height = top + lanes.length * (rowH + gap) + 4;
   const width = Math.max(560, (host.clientWidth || 720) - 34) * state.zoom;
   const t0 = plan.start;
   const t1 = Math.max(plan.finish, t0 + 6 * HOUR);
   const x = (t: number) => labelW + ((t - t0) / (t1 - t0)) * (width - labelW - 8);
   const rowY = new Map(lanes.map((i, k) => [i, top + k * (rowH + gap)]));
   const parts: string[] = [];
-  // Offline nights, only while each is wider than a pixel.
-  if ((t1 - t0) / (width - labelW) < 6 * HOUR) {
-    for (const [a, b] of r.offline) {
-      if (b <= t0 || a >= t1) continue;
-      parts.push(
-        `<rect class="night" x="${x(Math.max(a, t0))}" y="${top - 4}" width="${Math.max(0.5, x(Math.min(b, t1)) - x(Math.max(a, t0)))}" height="${height - top}"/>`,
-      );
-    }
-  }
+  const lanesTop = top - 3;
+  const lanesH = height - lanesTop - 2;
+  // Event windows and offline nights shade the workers' rows behind the bars.
+  const shown = { sale: false, block: false, night: false };
   for (const w of r.windows) {
     if (w.end <= t0 || w.start >= t1) continue;
     const a = x(Math.max(w.start, t0));
     const b = x(Math.min(w.end, t1));
+    const kind = w.effect.kind === "discount" ? "sale" : "block";
+    shown[kind] = true;
     parts.push(
-      `<rect class="event ${w.effect.kind === "discount" ? "sale" : "block"}" x="${a}" y="2" width="${Math.max(1, b - a)}" height="12" rx="2"><title>${esc(w.name)}</title></rect>`,
+      `<rect class="event ${kind}" x="${a}" y="${lanesTop}" width="${Math.max(1, b - a)}" height="${lanesH}"><title>${esc(w.name)}</title></rect>`,
     );
+  }
+  // Nights only once each is wider than a pixel.
+  if ((t1 - t0) / (width - labelW) < 6 * HOUR) {
+    for (const [a, b] of r.offline) {
+      if (b <= t0 || a >= t1) continue;
+      shown.night = true;
+      parts.push(
+        `<rect class="night" x="${x(Math.max(a, t0))}" y="${lanesTop}" width="${Math.max(0.5, x(Math.min(b, t1)) - x(Math.max(a, t0)))}" height="${lanesH}"/>`,
+      );
+    }
   }
   const tick = niceTick(t1 - t0);
   const tickFmt =
     tick >= DAY
       ? fmt(
           tick >= 30 * DAY
-            ? { month: "short", year: "2-digit" }
+            ? { month: "short", year: "numeric" }
             : { day: "numeric", month: "short" },
         )
       : fmt({ hour: "2-digit", minute: "2-digit" });
   for (let t = Math.ceil(t0 / tick) * tick; t <= t1; t += tick) {
+    // A label too near the right edge would be cut off; its line still shows.
+    const room = width - x(t) > 64;
     parts.push(
-      `<line class="grid" x1="${x(t)}" x2="${x(t)}" y1="${top - 6}" y2="${height - 6}"/><text class="tick" x="${x(t) + 3}" y="${top - 10}">${esc(tickFmt.format(new Date(t * 1000)))}</text>`,
+      `<line class="grid" x1="${x(t)}" x2="${x(t)}" y1="${dateH - 4}" y2="${height - 2}"/>${room ? `<text class="tick" x="${x(t) + 4}" y="14">${esc(tickFmt.format(new Date(t * 1000)))}</text>` : ""}`,
     );
+  }
+  if (marks.length) {
+    const cy = dateH + markH / 2;
+    const both = plan.itemUses.length && plan.gemUses.length;
+    parts.push(
+      `<text class="row-label" x="0" y="${cy + 4}">${both ? "Items, gems" : plan.gemUses.length ? "Gems used" : "Items used"}</text>`,
+    );
+    for (const m of marks) {
+      const mx = x(m.at);
+      parts.push(
+        `<path class="${m.cls}" d="M${mx} ${cy - 7} l6 7 -6 7 -6 -7z"><title>${esc(m.title)}</title></path>`,
+      );
+    }
   }
   for (const i of lanes) {
     const y = rowY.get(i)!;
@@ -738,7 +778,7 @@ function renderTimeline(r: Ok) {
     for (const p of plan.steps) {
       if (p.holds === i) {
         parts.push(
-          `<rect class="held" x="${x(p.start)}" y="${y + 3}" width="${Math.max(1, x(p.end) - x(p.start))}" height="${rowH - 6}" rx="3"><title>${esc(`Waiting while ${stepName(gd, p)} upgrades`)}</title></rect>`,
+          `<rect class="held" x="${x(p.start)}" y="${y}" width="${Math.max(1, x(p.end) - x(p.start))}" height="${rowH}" rx="4"><title>${esc(`Waiting while ${stepName(gd, p)} upgrades`)}</title></rect>`,
         );
       }
       if (p.worker !== i) continue;
@@ -748,44 +788,42 @@ function renderTimeline(r: Ok) {
         p.lane,
         p.hall ? "hall" : "",
         p.reason === "running" ? "running" : "",
-        p.item ? "booked" : "",
         state.selected === p.id ? "selected" : "",
       ].join(" ");
       const label =
         wPx > 80
           ? `<text class="block-label ${p.lane}" x="${x(p.start) + 5}" y="${y + rowH / 2 + 4}">${esc(stepName(gd, p))}</text>`
           : "";
+      const finishedBy = p.item
+        ? `, finished with ${itemName(p.item)}`
+        : p.gems
+          ? `, finished with ${num.format(p.gems)} gems`
+          : "";
       parts.push(
-        `<g class="hit" data-action="select" data-step="${esc(p.id)}" tabindex="0" role="button" aria-label="${esc(stepName(gd, p))}"><rect class="${cls}" x="${x(p.start)}" y="${y}" width="${wPx}" height="${rowH}" rx="4"><title>${esc(`${stepName(gd, p)}: ${when(p.start)} to ${when(p.end)}`)}</title></rect>${label}</g>`,
+        `<g class="hit" data-action="select" data-step="${esc(p.id)}" tabindex="0" role="button" aria-label="${esc(stepName(gd, p))}"><rect class="${cls}" x="${x(p.start)}" y="${y}" width="${wPx}" height="${rowH}" rx="4"><title>${esc(`${stepName(gd, p)}: ${when(p.start)} to ${when(p.end)}${finishedBy}`)}</title></rect>${label}</g>`,
       );
     }
   }
-  for (const u of plan.itemUses) {
-    const ux = x(u.at);
-    parts.push(
-      `<path class="use ${u.kind}" d="M${ux} 18 l5 6 -5 6 -5 -6z"><title>${esc(`${itemName(u.item)}: ${when(u.at)}, saves ${span(u.savedSeconds)}`)}</title></path>`,
-    );
-  }
-  for (const g of plan.gemUses) {
-    const step = plan.steps.find((s) => s.id === g.stepId);
-    const gx = x(g.at);
-    parts.push(
-      `<path class="use gem" d="M${gx} 18 l5 6 -5 6 -5 -6z"><title>${esc(`${num.format(g.gems)} gems${step ? ` on ${stepName(gd, step)}` : ""}: ${when(g.at)}, saves ${span(g.savedSeconds)}`)}</title></path>`,
-    );
-  }
+  const legend = [
+    `<span><i class="key builder"></i>Builders</span>`,
+    `<span><i class="key lab"></i>Laboratory</span>`,
+    `<span><i class="key petHouse"></i>Pet House</span>`,
+    shown.night ? `<span><i class="key night"></i>Offline</span>` : "",
+    shown.sale ? `<span><i class="key sale"></i>Event discount</span>` : "",
+    shown.block ? `<span><i class="key hold"></i>No hero upgrades</span>` : "",
+    plan.itemUses.length ? `<span><i class="key use"></i>Item used</span>` : "",
+    plan.gemUses.length ? `<span><i class="key gem"></i>Gems used</span>` : "",
+  ];
   host.innerHTML = `
     <div class="timeline-bar">
       <h3>Timeline</h3>
-      <div class="legend">
-        <span><i class="key builder"></i>Builders</span><span><i class="key lab"></i>Laboratory</span><span><i class="key petHouse"></i>Pet House</span>
-        <span><i class="key night"></i>Offline</span><span><i class="key use"></i>Item used</span>${plan.gemUses.length ? `<span><i class="key gem"></i>Gems used</span>` : ""}
-      </div>
+      <div class="legend">${legend.join("")}</div>
       <div class="seg small" role="group" aria-label="Zoom">
         ${[1, 2, 4, 8, 16].map((z) => `<button type="button" data-action="zoom" data-value="${z}" aria-pressed="${z === state.zoom}">${z}×</button>`).join("")}
       </div>
     </div>
     <div class="scroller"><svg class="chart" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" role="img" aria-label="Upgrade timeline">${parts.join("")}</svg></div>
-    <p class="muted small">Tap an upgrade for details. Zoom in to see each night offline.</p>`;
+    <p class="muted small">Tap an upgrade for details.${shown.night ? "" : " Zoom in to see each night offline."}</p>`;
 }
 
 function renderDetails(r: Ok) {
