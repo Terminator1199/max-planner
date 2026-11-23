@@ -236,23 +236,24 @@ const REASON: Record<PlacedStep["reason"], string> = {
   instant: "Takes no time, so it happens as soon as it can",
   hammer: "Finished by a hammer the moment a worker was free",
 };
-const BOTTLENECK: Record<string, string> = {
-  lab: "the Laboratory",
-  petHouse: "the Pet House",
-  chain: "the longest chain of upgrades",
-  builders: "builder time",
+const BOTTLENECK_SHORT: Record<string, string> = {
+  lab: "Laboratory",
+  petHouse: "Pet House",
+  chain: "Longest chain",
+  builders: "Builders",
 };
-function itemsChip(r: Ok) {
-  if (!r.hasItems) return `<a class="chip" href="#items">Add your magic items</a>`;
+function itemsTile(r: Ok) {
+  if (!r.hasItems)
+    return `<a class="stat" href="#items"><span>Magic items</span><b>Add yours</b></a>`;
   if (r.savedSeconds > 0)
-    return `<a class="chip good" href="#items">Items save ${span(r.savedSeconds)}</a>`;
-  return `<a class="chip" href="#items" title="With this plan, using your items does not bring the max date forward.">Items don't move the date</a>`;
+    return `<a class="stat good" href="#items"><span>Magic items save</span><b>${span(r.savedSeconds)}</b></a>`;
+  return `<a class="stat" href="#items" title="With this plan, using your items does not bring the max date forward."><span>Magic items</span><b>No change</b></a>`;
 }
-function gemsChip(r: Ok) {
-  if (!r.hasGems) return "";
+function gemsTile(r: Ok) {
+  if (!r.hasGems) return `<a class="stat" href="#items"><span>Gems</span><b>Add yours</b></a>`;
   if (r.gemsSaved > 0)
-    return `<a class="chip good" href="#items">Gems save ${span(r.gemsSaved)}</a>`;
-  return `<a class="chip" href="#items" title="No upgrade on the path that sets your max date is long or cheap enough for your gems yet.">Gems don't move the date</a>`;
+    return `<a class="stat good" href="#items"><span>Gems save</span><b>${span(r.gemsSaved)}</b></a>`;
+  return `<a class="stat" href="#items" title="No upgrade on the path that sets your max date is long or cheap enough for your gems yet."><span>Gems</span><b>No change</b></a>`;
 }
 const gemGlyph = `<svg class="glyph" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4h10l4 5-9 11L3 9z" fill="var(--gem)" opacity=".9"/><path d="M3 9h18M9 4l3 16M15 4l-3 16" stroke="var(--surface)" stroke-width="1" fill="none" opacity=".7"/></svg>`;
 const itemName = (id: string) => items.find((i) => i.id === id)?.name ?? id;
@@ -320,54 +321,199 @@ function show() {
   window.scrollTo({ top: 0 });
 }
 
+type Ok = Extract<PlanOutput, { ok: true }>;
+const ok = (): Ok | null => (state.result && state.result.ok ? state.result : null);
+
 // --- Start -----------------------------------------------------------------------------------
+const ICONS = {
+  builders: `<svg viewBox="0 0 44 44" aria-hidden="true"><rect x="2" y="2" width="40" height="40" rx="12" fill="var(--gold)" stroke="var(--outline)" stroke-width="2"/><path d="M12 15h14l3 4h-17z" fill="#2a1d3f"/><rect x="18" y="19" width="5" height="15" rx="2" fill="#2a1d3f"/></svg>`,
+  lab: `<svg viewBox="0 0 44 44" aria-hidden="true"><rect x="2" y="2" width="40" height="40" rx="12" fill="var(--elixir)" stroke="var(--outline)" stroke-width="2"/><path d="M18 10h8M19 10v8l-7 12a3 3 0 0 0 3 4h14a3 3 0 0 0 3-4l-7-12v-8" fill="none" stroke="#fff" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/><path d="M15 27h14l2 4H13z" fill="#fff"/></svg>`,
+  helpers: `<svg viewBox="0 0 44 44" aria-hidden="true"><rect x="2" y="2" width="40" height="40" rx="12" fill="var(--pet)" stroke="var(--outline)" stroke-width="2"/><circle cx="22" cy="24" r="10" fill="none" stroke="#fff" stroke-width="3"/><path d="M22 24v-5M22 24l4 3M19 10h6" stroke="#fff" stroke-width="3" stroke-linecap="round"/></svg>`,
+  gems: `<svg viewBox="0 0 44 44" aria-hidden="true"><rect x="2" y="2" width="40" height="40" rx="12" fill="var(--gem)" stroke="var(--outline)" stroke-width="2"/><path d="M15 12h14l6 8-13 14L9 20z" fill="#fff"/><path d="M9 20h26M18 12l4 22 4-22" fill="none" stroke="var(--gem)" stroke-width="1.6"/></svg>`,
+  events: `<svg viewBox="0 0 44 44" aria-hidden="true"><rect x="2" y="2" width="40" height="40" rx="12" fill="var(--surface)" stroke="var(--outline)" stroke-width="2"/><rect x="10" y="12" width="24" height="21" rx="4" fill="none" stroke="var(--ink)" stroke-width="3"/><path d="M10 19h24M16 9v6M28 9v6" stroke="var(--ink)" stroke-width="3" stroke-linecap="round"/><rect x="15" y="23" width="6" height="5" rx="1" fill="var(--elixir)"/></svg>`,
+  sleep: `<svg viewBox="0 0 44 44" aria-hidden="true"><rect x="2" y="2" width="40" height="40" rx="12" fill="#2a1d3f" stroke="var(--outline)" stroke-width="2"/><path d="M27 31a11 11 0 0 1-9-17 11 11 0 1 0 13 14 11 11 0 0 1-4 3z" fill="#f4b321"/></svg>`,
+};
+
+const FEATURES: [keyof typeof ICONS, string, string][] = [
+  [
+    "builders",
+    "Every builder kept busy",
+    "Each upgrade left is booked onto a builder, in the order that finishes soonest.",
+  ],
+  [
+    "lab",
+    "Research and pets alongside",
+    "The Laboratory and Pet House run at the same time, pausing only while their own building upgrades.",
+  ],
+  [
+    "helpers",
+    "Helpers and the Gold Pass",
+    "Your Builder's Apprentice and Lab Assistant come from the export. The Gold Pass boost grows over the season.",
+  ],
+  [
+    "gems",
+    "Items and gems where they count",
+    "Potions, books, hammers and gems go to the upgrades that bring your max date forward.",
+  ],
+  [
+    "events",
+    "Events on the calendar",
+    "Hammer Jam discounts and hero-free war weeks are part of the plan.",
+  ],
+  [
+    "sleep",
+    "Nothing starts while you sleep",
+    "Set your offline hours and time zone, and upgrades start when you are back.",
+  ],
+];
+
+/** A small plan board for the start page: the demo village, planned for real. */
+let preview: Ok | null = null;
+let previewAsked = false;
+function askPreview() {
+  if (previewAsked) return;
+  previewAsked = true;
+  const text = demoExport(gd, Math.floor(Date.now() / 1000 / HOUR) * HOUR);
+  const own = { ...structuredClone(DEFAULTS), timeZone: localZone };
+  void comparer.plan({ text, settings: own }, false).then((out) => {
+    if (!out.ok) return;
+    preview = out;
+    const el = document.getElementById("board");
+    if (el) el.outerHTML = boardHtml();
+  });
+}
+
+function boardHtml(): string {
+  const r = preview;
+  // Narrow screens get a narrower drawing, so its labels stay readable.
+  const W = Math.round(Math.max(300, Math.min(560, (window.innerWidth || 560) - 76)));
+  const labelW = 70;
+  const rowH = 15;
+  const gap = 7;
+  const top = 18;
+  if (!r) {
+    const rows = [
+      "Builder 1",
+      "Builder 2",
+      "Builder 3",
+      "Builder 4",
+      "Builder 5",
+      "Laboratory",
+      "Pet House",
+    ];
+    const h = top + rows.length * (rowH + gap);
+    return `<figure class="board" id="board" aria-busy="true">
+      <div class="board-top"><div class="board-days"><b>…</b><span>days to max</span></div><p class="board-who">Example village<br/>Planning it now</p></div>
+      <svg viewBox="0 0 ${W} ${h}" role="img" aria-label="Planning the example village">${rows
+        .map(
+          (name, i) =>
+            `<text class="lane-name" x="0" y="${top + i * (rowH + gap) + 11}">${name}</text><rect class="lane-bg" x="${labelW}" y="${top + i * (rowH + gap)}" width="${W - labelW}" height="${rowH}" rx="5"/>`,
+        )
+        .join("")}</svg>
+      <figcaption>A made-up village, planned on the real game data.</figcaption>
+    </figure>`;
+  }
+  const plan = r.plan;
+  const maxed = plan.halls.at(-1)?.maxedAt ?? plan.finish;
+  const lanes = plan.workers.map((_, i) => i).filter((i) => plan.steps.some((p) => p.worker === i));
+  const h = top + lanes.length * (rowH + gap);
+  const t0 = plan.start;
+  const x = (t: number) => labelW + ((t - t0) / (maxed - t0)) * (W - labelW);
+  const parts: string[] = [];
+  const monthFmt = fmt({ month: "short" });
+  const d = new Date(t0 * 1000);
+  for (let m = 1; m < 40; m += 1) {
+    const at = Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + m, 1) / 1000;
+    if (at >= maxed) break;
+    const step = Math.max(1, Math.round((maxed - t0) / (30 * DAY) / 6));
+    if (m % step) continue;
+    parts.push(
+      `<text class="tick" x="${x(at) + 2}" y="10">${esc(monthFmt.format(new Date(at * 1000)))}</text>`,
+    );
+  }
+  const bars: string[] = [];
+  lanes.forEach((w, k) => {
+    const y = top + k * (rowH + gap);
+    parts.push(
+      `<text class="lane-name" x="0" y="${y + 11}">${esc(workerName(plan, w))}</text><rect class="lane-bg" x="${labelW}" y="${y}" width="${W - labelW}" height="${rowH}" rx="5"/>`,
+    );
+    for (const p of plan.steps) {
+      if (p.worker !== w || p.end <= p.start) continue;
+      const cls = p.lane === "builder" ? "b" : p.lane === "lab" ? "l" : "p";
+      bars.push(
+        `<rect class="${cls}" x="${x(p.start).toFixed(1)}" y="${y}" width="${Math.max(0.8, x(p.end) - x(p.start) - 0.6).toFixed(1)}" height="${rowH}" rx="3"/>`,
+      );
+    }
+  });
+  return `<figure class="board" id="board">
+    <div class="board-top">
+      <div class="board-days"><b>${daysText(maxed - t0)}</b><span>${daysUnit(maxed - t0)} to max</span></div>
+      <p class="board-who">Example village<br/>Town Hall ${r.village.townHall}, ${r.village.builders} builders</p>
+    </div>
+    <svg viewBox="0 0 ${W} ${h}" role="img" aria-label="Example plan: every builder, the Laboratory and the Pet House busy until ${esc(day(maxed))}">${parts.join("")}<g class="bars">${bars.join("")}</g></svg>
+    <figcaption>A made-up village, planned on the real game data: gold is builders, pink the Laboratory, teal the Pet House. Maxed ${esc(day(maxed))}.</figcaption>
+  </figure>`;
+}
+
 function renderStart() {
   const list = store.villages();
+  askPreview();
   $("view-start").innerHTML = `
-    <div class="narrow">
-      <div class="hero">
-        <section class="card">
-          <h2>How long until your base is maxed?</h2>
-          <p class="muted">Paste your village export. Max Planner schedules every upgrade left across your builders, Laboratory and Pet House, and tells you the day each Town Hall is maxed.</p>
-          <label class="field" for="paste-text">Village export
+    <div class="narrow landing">
+      <section class="landing-hero">
+        <div class="hero-copy">
+          <h2 class="hero-title">How many days until your village is maxed?</h2>
+          <p class="hero-lede">Paste your Clash of Clans export. Max Planner books every upgrade left onto your builders, Laboratory and Pet House, and gives you the day each Town Hall is done.</p>
+          <div class="row wrap">
+            <button class="button primary big" type="button" data-action="focus-paste">Paste my export</button>
+            <button class="button big" type="button" data-action="demo">Try the demo village</button>
+          </div>
+          <p class="muted small">Runs in your browser. Your export never leaves it.</p>
+        </div>
+        ${boardHtml()}
+      </section>
+      ${
+        list.length
+          ? `<section class="card">
+              <h2>Your villages</h2>
+              <ul class="saved">${list
+                .map(
+                  (v) => `<li>
+                  <span><span class="name">${esc(v.tag)}, Town Hall ${v.townHall}</span><span class="muted small block">Exported ${esc(day(v.exportedAt))}</span></span>
+                  <button class="button" type="button" data-action="open" data-item="${esc(v.id)}">Open</button>
+                  <button class="link" type="button" data-action="remove" data-item="${esc(v.id)}" aria-label="Remove ${esc(v.tag)} exported ${esc(day(v.exportedAt))}">Remove</button>
+                </li>`,
+                )
+                .join("")}</ul>
+            </section>`
+          : ""
+      }
+      <section class="card paste-card" id="paste">
+        <div class="paste-steps">
+          <h2>Plan your village</h2>
+          <ol class="steps">
+            <li><span>In Clash of Clans, open <strong>Settings</strong>.</span></li>
+            <li><span>Tap <strong>More Settings</strong>, then <strong>Data Export</strong>, then <strong>Copy</strong>.</span></li>
+            <li><span>Paste it here and tap <strong>Plan my village</strong>.</span></li>
+          </ol>
+        </div>
+        <div class="paste-box">
+          <label class="field" for="paste-text">Your village export
             <textarea id="paste-text" rows="7" spellcheck="false" placeholder='{"tag":"#…","timestamp":…,"buildings":[…]}'></textarea>
           </label>
           ${state.pasteError ? `<p class="error small">${esc(state.pasteError)}</p>` : ""}
-          <div class="row wrap">
-            <button class="button primary" type="button" data-action="paste-plan">Plan my village</button>
-            <button class="button" type="button" data-action="demo">Try a demo village</button>
-          </div>
-          <p class="muted small">Planning happens in your browser. Your export is never uploaded.</p>
-        </section>
-        <section class="card">
-          <h3>Getting your export</h3>
-          <ol class="steps">
-            <li>In Clash of Clans, open <strong>Settings</strong>.</li>
-            <li>Tap <strong>More Settings</strong>, then <strong>Data Export</strong>, then <strong>Copy</strong>.</li>
-            <li>Paste it here and tap <strong>Plan my village</strong>.</li>
-          </ol>
-          <p class="muted small">Export again whenever you like: each export is kept here, so you can compare your progress.</p>
-          ${
-            list.length
-              ? `<h4>Your villages</h4><ul class="saved">${list
-                  .map(
-                    (v) => `<li>
-                      <span><span class="name">${esc(v.tag)} · TH${v.townHall}</span><span class="muted small block">Exported ${esc(day(v.exportedAt))}</span></span>
-                      <button class="button" type="button" data-action="open" data-item="${esc(v.id)}">Open</button>
-                      <button class="link" type="button" data-action="remove" data-item="${esc(v.id)}" aria-label="Remove ${esc(v.tag)} exported ${esc(day(v.exportedAt))}">Remove</button>
-                    </li>`,
-                  )
-                  .join("")}</ul>`
-              : ""
-          }
-        </section>
-      </div>
+          <div class="row wrap"><button class="button primary" type="button" data-action="paste-plan">Plan my village</button></div>
+          <p class="muted small">Each export you plan is kept in this browser, so you can export again later and compare.</p>
+        </div>
+      </section>
+      <section class="card">
+        <h2>What the plan accounts for</h2>
+        <ul class="features">${FEATURES.map(([icon, title, text]) => `<li>${ICONS[icon]}<div><strong>${title}</strong><p>${text}</p></div></li>`).join("")}</ul>
+      </section>
     </div>`;
 }
 
 // --- Plan ------------------------------------------------------------------------------------
-type Ok = Extract<PlanOutput, { ok: true }>;
-const ok = (): Ok | null => (state.result && state.result.ok ? state.result : null);
 
 function renderPlan() {
   if (!state.text) {
@@ -391,37 +537,56 @@ function renderPlan() {
   renderReport(r);
 }
 
+function ring(fraction: number, num: string, unit: string): string {
+  const C = 2 * Math.PI * 70;
+  const done = Math.max(0, Math.min(1, fraction)) * C;
+  return `<svg class="ring" viewBox="0 0 168 168" aria-hidden="true">
+    <circle class="track" cx="84" cy="84" r="70"/>
+    ${done > 0 ? `<circle class="done" cx="84" cy="84" r="70" stroke-dasharray="${done.toFixed(1)} ${C.toFixed(1)}" transform="rotate(-90 84 84)"/>` : ""}
+    <text class="num" x="84" y="92">${esc(num)}</text>
+    <text class="unit" x="84" y="116">${esc(unit)}</text>
+  </svg>`;
+}
+
+const dateLong = (t: number) =>
+  fmt({ weekday: "long", day: "numeric", month: "long", year: "numeric" }).format(
+    new Date(t * 1000),
+  );
+const clock = (t: number) => fmt({ hour: "2-digit", minute: "2-digit" }).format(new Date(t * 1000));
+
 function renderHeadline() {
   const el = $("headline");
   if (!state.text) return;
   const r = state.result;
   if (!r) {
-    el.innerHTML = `<p class="eyebrow">Planning your village</p><p class="busy">Working out every upgrade</p>`;
+    el.innerHTML = `<div class="headline">${ring(0, "…", "days left")}<div class="head-copy"><p class="eyebrow">Planning your village</p><h2 class="busy">Working out every upgrade</h2></div></div>`;
     return;
   }
   if (!r.ok) {
-    el.innerHTML = `<div class="error"><h2>That export could not be planned</h2><p>${esc(r.message)}</p></div>`;
+    el.innerHTML = `<div class="error"><h2>That export could not be planned</h2><p>${esc(r.message)}</p><p><a href="#start">Paste another export</a></p></div>`;
     return;
   }
   const plan = r.plan;
   const maxed = plan.halls.at(-1)?.maxedAt ?? plan.finish;
   const left = maxed - plan.start;
   const pct = Math.round(r.progress.fraction * 1000) / 10;
+  const upgrades = plan.steps.filter((s) => s.reason !== "running").length;
+  const tiles = [
+    `<div class="stat"><span>Upgrades left</span><b>${num.format(upgrades)}</b>${r.totals.walls.upgrades ? `<span>and ${num.format(r.totals.walls.upgrades)} wall levels</span>` : ""}</div>`,
+    `<div class="stat" title="Without helpers, the Gold Pass or items, no plan could finish in under ${span(r.lowerBound.seconds)}."><span>Sets the date</span><b>${esc(BOTTLENECK_SHORT[r.lowerBound.bottleneck] ?? "Builders")}</b></div>`,
+    itemsTile(r),
+    gemsTile(r),
+  ];
   el.innerHTML = `
-    <p class="eyebrow">Town Hall ${r.target} maxed in ${state.planning ? `<span class="busy">updating</span>` : ""}</p>
-    <div class="big"><span class="big-num">${daysText(left)}</span><span class="big-unit">${daysUnit(left)}</span></div>
-    <p class="when">${esc(when(maxed))}</p>
-    <div class="progress-row" title="Builder, Laboratory and Pet House time already in your village, against the time left">
-      <div class="bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${pct}"><i style="width:${pct}%"></i></div>
-      <span class="small"><strong>${pct}%</strong> of the way</span>
+    <div class="headline">
+      ${ring(r.progress.fraction, daysText(left), `${daysUnit(left)} left`)}
+      <div class="head-copy">
+        <p class="eyebrow">Town Hall ${r.target} maxed on ${state.planning ? `<span class="busy">updating</span>` : ""}</p>
+        <h2>${esc(dateLong(maxed))}</h2>
+        <p class="muted"><strong>${pct}%</strong> of the way there. The last upgrade ends at ${esc(clock(maxed))}.</p>
+      </div>
     </div>
-    <div class="chips">
-      ${itemsChip(r)}
-      ${gemsChip(r)}
-      <span class="chip">${plan.steps.filter((s) => s.reason !== "running").length} upgrades left</span>
-      ${r.totals.walls.upgrades ? `<span class="chip">${num.format(r.totals.walls.upgrades)} wall levels, not scheduled</span>` : ""}
-      <span class="chip" title="Without helpers, the Gold Pass or items, no plan could finish in under ${span(r.lowerBound.seconds)}.">Limited by ${BOTTLENECK[r.lowerBound.bottleneck] ?? "builder time"}</span>
-    </div>
+    <div class="stats">${tiles.join("")}</div>
     <p class="muted small">From your export of ${esc(when(r.village.exportedAt))}. Planned in ${r.ms} ms with ${r.runs} scheduler runs${r.stoppedEarly ? ", stopped at the time limit" : ""}.</p>`;
 }
 
@@ -587,7 +752,7 @@ function renderTimeline(r: Ok) {
       ].join(" ");
       const label =
         wPx > 80
-          ? `<text class="block-label" x="${x(p.start) + 5}" y="${y + rowH / 2 + 4}">${esc(stepName(gd, p))}</text>`
+          ? `<text class="block-label ${p.lane}" x="${x(p.start) + 5}" y="${y + rowH / 2 + 4}">${esc(stepName(gd, p))}</text>`
           : "";
       parts.push(
         `<g class="hit" data-action="select" data-step="${esc(p.id)}" tabindex="0" role="button" aria-label="${esc(stepName(gd, p))}"><rect class="${cls}" x="${x(p.start)}" y="${y}" width="${wPx}" height="${rowH}" rx="4"><title>${esc(`${stepName(gd, p)}: ${when(p.start)} to ${when(p.end)}`)}</title></rect>${label}</g>`,
@@ -971,6 +1136,12 @@ document.addEventListener("click", (ev) => {
     case "demo":
       openDemo();
       return;
+    case "focus-paste": {
+      const box = document.getElementById("paste-text") as HTMLTextAreaElement | null;
+      document.getElementById("paste")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      box?.focus({ preventScroll: true });
+      return;
+    }
     case "paste-plan": {
       const text = (document.getElementById("paste-text") as HTMLTextAreaElement).value.trim();
       if (!text) {
