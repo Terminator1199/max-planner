@@ -1,4 +1,4 @@
-import type { Category, GameData, Lane, Resource } from "@max-planner/gamedata";
+import type { Category, Entity, GameData, Lane, Resource } from "@max-planner/gamedata";
 import type { Village } from "../types.ts";
 
 /** One level of one instance: the unit of work the scheduler places. */
@@ -190,10 +190,69 @@ export function remainingWork(
   let wallUpgrades = 0;
   const wallCost: Record<Resource, number> = { gold: 0, elixir: 0, darkElixir: 0 };
 
+  // Merges and hall upgrades consume buildings, so the game data's count at a hall is
+  // what remains afterwards. Sources still to be merged need copies of their own.
+  const mergeUse = new Map<number, { into: number; count: number }[]>();
+  for (const e of gd.entities()) {
+    for (const src of e.mergeOf ?? []) {
+      mergeUse.set(src.entityId, [
+        ...(mergeUse.get(src.entityId) ?? []),
+        { into: e.id, count: src.count },
+      ]);
+    }
+  }
+  const owned = (id: number) => village.instances.filter((i) => i.entityId === id).length;
+  /** Copies of an entity the village may have at hall `r`, counting ones a merge will use. */
+  const allowedAt = (id: number, r: number): number => {
+    let n = gd.countAt(id, r);
+    for (const use of mergeUse.get(id) ?? []) {
+      n += (gd.countAt(use.into, r) - owned(use.into)) * use.count;
+    }
+    return n;
+  };
+
+  const merged: Entity[] = [];
   for (const entity of gd.entities()) {
     if (entity.id === hallEntity.id || entity.village !== "home") continue;
+    // Merged buildings need their sources' slots, so they come after everything else.
+    if (entity.mergeOf) merged.push(entity);
+    else addEntity(entity);
+  }
+  /** Source instances already promised to a merge. */
+  const consumed = new Map<number, Set<number>>();
+  for (const entity of merged) {
+    addEntity(entity, (index) => {
+      // A new merged building's first level consumes the most upgraded unused sources.
+      const edges: string[] = [];
+      for (const src of entity.mergeOf!) {
+        const used = consumed.get(src.entityId) ?? new Set<number>();
+        consumed.set(src.entityId, used);
+        const pool = (slots.get(src.entityId) ?? [])
+          .filter((s) => !used.has(s.index))
+          .sort(
+            (a, b) =>
+              b.level + Number(b.upgrading) - (a.level + Number(a.upgrading)) || a.index - b.index,
+          )
+          .slice(0, src.count);
+        if (pool.length < src.count) return undefined;
+        for (const s of pool) {
+          used.add(s.index);
+          const id = reached(src.entityId, s.index, src.level);
+          if (id === undefined) continue;
+          if (!steps.has(id)) return undefined;
+          edges.push(id);
+        }
+      }
+      return edges;
+    });
+  }
+
+  function addEntity(entity: Entity, mergeEdges?: (index: number) => string[] | undefined) {
     const cap = gd.capAt(entity.id, target);
-    const wanted = gd.countAt(entity.id, target);
+    // The most copies any hall up to the target needs: a building a later hall consumes
+    // (the Eagle Artillery at Town Hall 17) must still be built and maxed first.
+    let wanted = 0;
+    for (let r = current; r <= target; r++) wanted = Math.max(wanted, allowedAt(entity.id, r));
 
     if (entity.category === "wall") {
       let existing = 0;
@@ -202,13 +261,9 @@ export function remainingWork(
         for (let x = wall.level + 1; x <= cap; x++) addWall(entity.id, x, wall.count);
       }
       for (let x = 1; x <= cap; x++) addWall(entity.id, x, Math.max(0, wanted - existing));
-      continue;
+      return;
     }
-    if (entity.mergeOf) {
-      notes.push(`${entity.name} is a merged building; merges are not planned yet.`);
-      continue;
-    }
-    if (entity.lane === null) continue;
+    if (entity.lane === null) return;
     const lane = entity.lane;
 
     const own = village.instances.filter((i) => i.entityId === entity.id);
@@ -248,10 +303,10 @@ export function remainingWork(
 
       // A new instance waits for the first hall that allows that many.
       let allowedFrom = current;
-      if (slot.index >= gd.countAt(entity.id, current)) {
+      if (slot.index >= allowedAt(entity.id, current)) {
         allowedFrom = target;
         for (let r = current + 1; r <= target; r++) {
-          if (gd.countAt(entity.id, r) > slot.index) {
+          if (allowedAt(entity.id, r) > slot.index) {
             allowedFrom = r;
             break;
           }
@@ -270,6 +325,15 @@ export function remainingWork(
         const hall = hallEdge(needHall);
         if (hall) after.push(hall);
         const id = stepId(entity.id, slot.index, x);
+        if (x === 1 && mergeEdges) {
+          const edges = mergeEdges(slot.index);
+          if (edges === undefined) {
+            unplannable.push({
+              stepId: id,
+              reason: `${entity.name} needs ${entity.mergeOf!.map((m) => `${m.count} ${gd.entity(m.entityId)?.name ?? m.entityId} at level ${m.level}`).join(" and ")} to merge, which the plan cannot reach.`,
+            });
+          } else after.push(...edges);
+        }
         steps.set(id, {
           id,
           entityId: entity.id,

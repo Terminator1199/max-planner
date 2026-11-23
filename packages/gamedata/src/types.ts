@@ -32,7 +32,15 @@ export const BUILDING_CATEGORIES: readonly Category[] = [
 ];
 
 /** Buildings the planner must recognise by role rather than by id. */
-export const ROLES = ["townHall", "builderHut", "laboratory", "petHouse", "heroHall"] as const;
+export const ROLES = [
+  "townHall",
+  "builderHut",
+  /** A hut earned elsewhere that adds a home builder (B.O.B's Hut). */
+  "extraBuilder",
+  "laboratory",
+  "petHouse",
+  "heroHall",
+] as const;
 export type Role = (typeof ROLES)[number];
 
 // ---------------------------------------------------------------------------

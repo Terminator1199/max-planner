@@ -27,6 +27,7 @@ export {
   compareIds,
   type DiscountSource,
   type HallDates,
+  type HelperBoost,
   type ItemUse,
   type Plan,
   type PlacedStep,
@@ -82,3 +83,10 @@ export {
   type ItemRules,
   type Waste,
 } from "./boost/inventory.ts";
+export {
+  helperBoosts,
+  BUILDERS_APPRENTICE,
+  LAB_ASSISTANT,
+  HELPER_PERIOD,
+  HELPER_LENGTH,
+} from "./boost/helpers.ts";

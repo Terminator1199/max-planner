@@ -9,3 +9,6 @@ coverage/
 # Raw exports pasted during development may hold real player tags.
 # Only anonymised files under fixtures/ are committed.
 exports-local/
+
+# Cached ClashKing snapshots for the game data build.
+tools/gamedata-build/cache/

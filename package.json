@@ -14,7 +14,8 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "check": "pnpm typecheck && pnpm test && pnpm format:check",
-    "preview:build": "node tools/preview-build/src/build.ts"
+    "preview:build": "node tools/preview-build/src/build.ts",
+    "gamedata:build": "node tools/gamedata-build/src/build.ts"
   },
   "devDependencies": {
     "@types/node": "^22.18.0",

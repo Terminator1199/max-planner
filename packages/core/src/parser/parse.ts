@@ -273,10 +273,11 @@ export function parseExport(text: string, gd: GameData, options: ParseOptions = 
     });
   }
   const townHall = Math.max(...halls.map((h) => h.level));
-  const hutEntity = gd.byRole("builderHut");
-  const builders = hutEntity
-    ? raw.filter((i) => i.entityId === hutEntity.id && i.level >= 1).length
-    : 0;
+  // Builder's Huts, plus a hut earned elsewhere that adds a home builder (B.O.B's Hut).
+  const hutIds = new Set(
+    [gd.byRole("builderHut")?.id, gd.byRole("extraBuilder")?.id].filter((id) => id !== undefined),
+  );
+  const builders = raw.filter((i) => hutIds.has(i.entityId) && i.level >= 1).length;
 
   // Levels the current Town Hall should not allow usually mean stale game data.
   for (const inst of raw) {
