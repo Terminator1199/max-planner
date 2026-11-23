@@ -678,10 +678,10 @@
         fill: var(--night);
       }
       .chart .event.sale {
-        fill: color-mix(in srgb, var(--good) 50%, transparent);
+        fill: color-mix(in srgb, var(--good) 16%, transparent);
       }
       .chart .event.block {
-        fill: color-mix(in srgb, var(--warn) 50%, transparent);
+        fill: color-mix(in srgb, var(--warn) 16%, transparent);
       }
       .chart .block {
         stroke: var(--surface);
@@ -703,19 +703,12 @@
         stroke: var(--outline);
         stroke-width: 2;
       }
-      .chart .block.booked {
-        stroke-dasharray: 3 2;
-        stroke: var(--outline);
-      }
       .chart .block.selected {
         stroke: var(--outline);
         stroke-width: 3;
       }
       .chart .held {
-        fill: none;
-        stroke: var(--elixir);
-        stroke-width: 1.5;
-        stroke-dasharray: 4 3;
+        fill: color-mix(in srgb, var(--muted) 22%, transparent);
       }
       .chart .block-label {
         font-size: 11px;
@@ -735,6 +728,23 @@
       }
       .chart .use {
         fill: var(--ink);
+        stroke: var(--surface);
+        stroke-width: 1.5;
+      }
+      .chart .mark-bg {
+        fill: var(--surface);
+        stroke: var(--hair);
+        stroke-width: 1;
+      }
+      .key-icon {
+        width: 16px;
+        height: 16px;
+        flex: none;
+      }
+      .chart .row-label {
+        font-size: 11px;
+        font-weight: 700;
+        fill: var(--muted);
       }
       .chart .use.gem {
         fill: var(--gem);
@@ -779,6 +789,12 @@
       .key.gem {
         background: var(--gem);
         transform: rotate(45deg) scale(0.75);
+      }
+      .key.sale {
+        background: color-mix(in srgb, var(--good) 30%, transparent);
+      }
+      .key.hold {
+        background: color-mix(in srgb, var(--warn) 30%, transparent);
       }
 
       /* Step details and order */
