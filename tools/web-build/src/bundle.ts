@@ -1,4 +1,4 @@
-// A small bundler for the preview: TypeScript modules in, one classic script out.
+// A small bundler for the website: TypeScript modules in, one classic script out.
 //
 // Node strips the types (the code base uses only erasable syntax), acorn parses the
 // result, and each module's imports and exports are rewritten into a registry of

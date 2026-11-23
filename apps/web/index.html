@@ -3,7 +3,15 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Max Planner Preview</title>
+    <title>Max Planner</title>
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23d4a017'/%3E%3Cpath d='M8 23V9l8 8 8-8v14' fill='none' stroke='%231c1917' stroke-width='3.5' stroke-linejoin='round'/%3E%3C/svg%3E"
+    />
+    <meta
+      name="description"
+      content="Days to max for Clash of Clans: paste your village export and get a builder, laboratory and pet plan to max your Town Hall."
+    />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -756,47 +764,402 @@
             border-color 120ms ease;
         }
       }
+
+      /* Small fixes over the base styles */
+      .toggle {
+        flex-wrap: nowrap;
+        align-items: flex-start;
+        padding-top: 8px;
+      }
+      .toggle input {
+        flex: none;
+        margin: 0;
+      }
+      .toggle > span {
+        flex: 1;
+        min-width: 0;
+      }
+      a.button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        text-decoration: none;
+        color: var(--ink);
+      }
+      a.button.primary {
+        color: #fff;
+      }
+      a.chip {
+        text-decoration: none;
+      }
+      a.chip:hover {
+        outline: 1px solid var(--muted);
+      }
+      .halls {
+        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+      }
+      .hall span:not(.hall-badge) {
+        white-space: nowrap;
+      }
+
+      /* Pages and navigation */
+      header.top {
+        position: sticky;
+        top: 0;
+        z-index: 5;
+      }
+      .brand {
+        text-decoration: none;
+        color: inherit;
+      }
+      .tabs {
+        display: flex;
+        gap: 2px;
+        overflow-x: auto;
+        scrollbar-width: none;
+      }
+      .tabs a {
+        padding: 10px 14px;
+        border-radius: 8px;
+        text-decoration: none;
+        color: var(--muted);
+        font-weight: 600;
+        white-space: nowrap;
+        min-height: 44px;
+        display: inline-flex;
+        align-items: center;
+      }
+      .tabs a[aria-current="page"] {
+        color: var(--ink);
+        background: var(--sunk);
+      }
+      .tabs a.disabled {
+        opacity: 0.45;
+        pointer-events: none;
+      }
+      @media (max-width: 640px) {
+        header.top {
+          flex-wrap: wrap;
+          padding-bottom: 6px;
+        }
+        .tabs {
+          order: 3;
+          width: 100%;
+          margin: 0 -6px;
+        }
+        .tabs a {
+          padding: 10px 9px;
+          flex: 1 0 auto;
+          justify-content: center;
+        }
+        .top-tagline {
+          display: none;
+        }
+      }
+      .view {
+        display: none;
+      }
+      .view.active {
+        display: block;
+      }
+      .narrow {
+        max-width: 1040px;
+        margin: 0 auto;
+        padding: 16px max(16px, 4vw) 32px;
+        display: grid;
+        gap: 16px;
+      }
+      .hero {
+        display: grid;
+        gap: 16px;
+        grid-template-columns: minmax(0, 1fr);
+      }
+      @media (min-width: 900px) {
+        .hero {
+          grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+          align-items: start;
+        }
+      }
+      .hero h2 {
+        font-size: clamp(1.6rem, 4vw, 2.3rem);
+        font-weight: 800;
+        letter-spacing: -0.02em;
+      }
+      .steps {
+        margin: 0;
+        padding-left: 1.2em;
+        display: grid;
+        gap: 6px;
+      }
+      .steps strong {
+        font-weight: 600;
+      }
+      .saved {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: grid;
+        gap: 6px;
+      }
+      .saved li {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto auto;
+        gap: 8px;
+        align-items: center;
+        padding: 8px 10px;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+      }
+      .saved .name {
+        font-weight: 600;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .bar {
+        height: 10px;
+        border-radius: 99px;
+        background: var(--sunk);
+        overflow: hidden;
+      }
+      .bar > i {
+        display: block;
+        height: 100%;
+        background: var(--good);
+        border-radius: 99px;
+      }
+      .progress-row {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 10px;
+        align-items: center;
+        max-width: 520px;
+      }
+      .busy {
+        color: var(--muted);
+      }
+      @media (prefers-reduced-motion: no-preference) {
+        .busy::after {
+          content: "";
+          display: inline-block;
+          width: 1.2em;
+          text-align: left;
+          animation: dots 1.2s steps(4) infinite;
+        }
+      }
+      @keyframes dots {
+        0% {
+          content: "";
+        }
+        25% {
+          content: ".";
+        }
+        50% {
+          content: "..";
+        }
+        75% {
+          content: "...";
+        }
+      }
+      .grid-2 {
+        display: grid;
+        gap: 16px;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      }
+      .diff {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: grid;
+      }
+      .diff li {
+        display: grid;
+        grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) auto;
+        gap: 10px;
+        padding: 8px 4px;
+        border-bottom: 1px solid var(--line);
+        align-items: baseline;
+      }
+      .diff .lv {
+        font-size: 0.82rem;
+        color: var(--muted);
+        overflow-wrap: anywhere;
+      }
+      .plus {
+        color: var(--good);
+        font-weight: 600;
+      }
+      .minus {
+        color: var(--warn);
+        font-weight: 600;
+      }
+      .prose {
+        max-width: 760px;
+      }
+      .prose h2 {
+        margin-top: 8px;
+      }
+      .prose h3 {
+        margin-top: 18px;
+      }
+      .prose p,
+      .prose li {
+        color: var(--ink);
+        line-height: 1.6;
+      }
+      .prose ul {
+        padding-left: 1.2em;
+        display: grid;
+        gap: 4px;
+      }
+      .prose a {
+        color: var(--gold);
+      }
+      select.compact {
+        width: auto;
+        min-height: 36px;
+        padding: 4px 8px;
+      }
+      .empty {
+        padding: 24px;
+        text-align: center;
+        display: grid;
+        gap: 10px;
+        justify-items: center;
+      }
+      .error {
+        border-left: 4px solid var(--warn);
+        padding: 8px 12px;
+        background: color-mix(in srgb, var(--warn) 8%, transparent);
+        border-radius: 6px;
+      }
     </style>
   </head>
   <body>
     <header class="top">
-      <div class="brand">
-        <h1>Max Planner</h1>
-        <span class="pill">Preview</span>
-      </div>
-      <p class="muted small">Days to max for Clash of Clans, planned in your browser</p>
+      <a class="brand" href="#start"><h1>Max Planner</h1></a>
+      <nav class="tabs" aria-label="Pages">
+        <a href="#start" data-nav="start">Start</a>
+        <a href="#plan" data-nav="plan">Plan</a>
+        <a href="#items" data-nav="items">Boosters</a>
+        <a href="#compare" data-nav="compare">Compare</a>
+        <a href="#about" data-nav="about">About</a>
+      </nav>
+      <p class="muted small top-tagline">Days to max for Clash of Clans</p>
     </header>
-    <p class="notice">
-      <strong>Made-up numbers.</strong> The real game data is not built yet, so this preview plans a
-      demo village whose costs and times are invented. The planner itself is the real one: the same
-      code the finished site will run.
-    </p>
-    <main class="layout">
-      <section class="card head" id="headline" aria-live="polite"></section>
-      <aside class="rail">
-        <section class="card" id="village"></section>
-        <section class="card" id="controls"></section>
-      </aside>
-      <div class="main">
-        <ul class="halls" id="halls"></ul>
-        <section class="card" id="timeline"></section>
-        <section class="card" id="details"></section>
-        <section class="card" id="boosters"></section>
-        <section class="card" id="events"></section>
-        <section class="card" id="upcoming"></section>
-        <section class="card" id="report"></section>
-      </div>
+
+    <main>
+      <section class="view" id="view-start" aria-label="Start"></section>
+
+      <section class="view" id="view-plan" aria-label="Plan">
+        <div class="layout">
+          <section class="card head" id="headline" aria-live="polite"></section>
+          <aside class="rail">
+            <section class="card" id="village"></section>
+            <section class="card" id="controls"></section>
+          </aside>
+          <div class="main">
+            <ul class="halls" id="halls"></ul>
+            <section class="card" id="timeline"></section>
+            <section class="card" id="details"></section>
+            <section class="card" id="upcoming"></section>
+            <section class="card" id="report"></section>
+          </div>
+        </div>
+      </section>
+
+      <section class="view" id="view-items" aria-label="Boosters">
+        <div class="narrow">
+          <section class="card" id="passes"></section>
+          <section class="card" id="boosters"></section>
+          <section class="card" id="events"></section>
+        </div>
+      </section>
+
+      <section class="view" id="view-compare" aria-label="Compare">
+        <div class="narrow" id="compare"></div>
+      </section>
+
+      <section class="view" id="view-about" aria-label="About">
+        <div class="narrow">
+          <article class="card prose">
+            <h2>How Max Planner works</h2>
+            <p>
+              Paste the data export from Clash of Clans and the planner works out every upgrade left
+              to max your Town Hall, or any higher hall you pick: buildings, traps, walls, heroes,
+              research and pets. It then schedules them across your builders, Laboratory and Pet
+              House, trying dozens of orders and keeping the one that finishes first.
+            </p>
+            <h3>What it takes into account</h3>
+            <ul>
+              <li>
+                Upgrades already running in your export, and every Town Hall, Laboratory, Hero Hall
+                and Pet House requirement.
+              </li>
+              <li>
+                Merged buildings from Town Hall 16, and the Eagle Artillery joining the Town Hall at
+                17.
+              </li>
+              <li>Your Builder's Apprentice and Lab Assistant, at the levels in your export.</li>
+              <li>
+                The Gold Pass boost over the season, event discounts such as Hammer Jam, and Clan
+                War League if you keep heroes ready for it.
+              </li>
+              <li>
+                Magic items you have and expect each month: potions when every worker is busy, books
+                on long upgrades, hammers on long waits.
+              </li>
+              <li>The hours you are offline: nothing starts while you sleep.</li>
+            </ul>
+            <h3>What it leaves out for now</h3>
+            <ul>
+              <li>
+                Walls are counted, with their cost, but not scheduled: they take no builder time.
+              </li>
+              <li>
+                Supercharges, guardians, crafted defenses, Town Hall weapons, hero equipment and the
+                Builder Base.
+              </li>
+              <li>Loot: the plan assumes you can afford each upgrade when its turn comes.</li>
+            </ul>
+            <h3>Your data</h3>
+            <p>
+              Everything runs in your browser. Your export is never uploaded. Villages and settings
+              you plan are kept in this browser only, so you can come back to them; remove a village
+              from the Start page at any time.
+            </p>
+            <h3>Game data and credits</h3>
+            <p>
+              Costs, times and requirements come from
+              <a href="https://github.com/ClashKingInc/ClashKingAssets">ClashKing's static data</a>,
+              taken on 16 November 2026 for Town Hall 19. That data is licensed GPL-3.0, and so is
+              the game data file built from it. Thanks to the ClashKing team. Rounding of discounted
+              times follows
+              <a href="https://clashclock.com/guides/how-it-works">ClashClock's write-up</a>.
+            </p>
+            <h3>Unofficial</h3>
+            <p>
+              This material is unofficial and is not endorsed by Supercell. For more information see
+              Supercell's Fan Content Policy:
+              <a href="https://supercell.com/en/fan-content-policy/"
+                >supercell.com/en/fan-content-policy</a
+              >.
+            </p>
+          </article>
+        </div>
+      </section>
     </main>
+
     <footer>
       <p>
         This material is unofficial and is not endorsed by Supercell. For more information see
         Supercell's Fan Content Policy:
         <a href="https://supercell.com/en/fan-content-policy/"
           >supercell.com/en/fan-content-policy</a
-        >.
+        >. Game data from ClashKing (GPL-3.0).
       </p>
-      <p>Coming next: real game data, comparing two exports, and saving your villages.</p>
     </footer>
+    <!-- worker -->
     <!-- bundle -->
   </body>
 </html>

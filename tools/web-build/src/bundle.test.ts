@@ -87,9 +87,9 @@ test("the bundled planner gives the same plan as the source", () => {
   assert.equal(core.sha256("abc"), direct.sha256("abc"));
 });
 
-test("the preview page bundles", () => {
-  const out = bundle({ root, entry: join(root, "apps/preview/src/main.ts") });
-  assert.ok(out.modules.includes("apps/preview/src/demo.ts"));
+test("the website bundles", () => {
+  const out = bundle({ root, entry: join(root, "apps/web/src/main.ts") });
+  assert.ok(out.modules.includes("apps/web/src/demo.ts"));
   assert.ok(out.modules.includes("packages/core/src/sched/simulate.ts"));
   assert.doesNotMatch(
     out.code,
