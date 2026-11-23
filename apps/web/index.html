@@ -982,6 +982,44 @@
         width: 6.5em;
       }
 
+      /* The bar under the booster cards: the plan's date as boosters change */
+      .boost-bar {
+        position: sticky;
+        bottom: 12px;
+        z-index: 4;
+      }
+      .boost-bar:empty {
+        display: none;
+      }
+      .boost-bar > div {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        flex-wrap: wrap;
+        padding: 12px 14px 12px 18px;
+        background: #2a1d3f;
+        color: #fff;
+        border: 2px solid #160e24;
+        border-radius: var(--r-card);
+        box-shadow: 0 4px 0 #160e24;
+      }
+      .boost-bar p {
+        display: grid;
+        gap: 2px;
+        font-weight: 700;
+      }
+      .boost-bar b {
+        font: 400 1.2rem/1.15 var(--display);
+        color: #f4b321;
+      }
+      .boost-bar .saved-by {
+        color: #8fe3b3;
+      }
+      .boost-bar .same {
+        color: #d9d0ee;
+      }
+
       /* Compare */
       .grid-2 {
         display: grid;
@@ -1363,6 +1401,7 @@
           <section class="card" id="gems"></section>
           <section class="card" id="boosters"></section>
           <section class="card" id="events"></section>
+          <div class="boost-bar" id="boost-bar" aria-live="polite"></div>
         </div>
       </section>
 
