@@ -134,12 +134,24 @@ export interface SimulateOptions {
   swaps?: ReadonlySet<number>;
   /** Switched-on event windows (see `expandEvents`): discounts and start blocks. */
   events?: readonly EventWindow[];
+  /** Repeating helper hours, such as the Lab Assistant's (see `helperBoosts`). */
+  helpers?: readonly HelperBoost[];
   /** Magic items to use, with when they arrive (see `arrivals`). */
   boosters?: {
     items: readonly MagicItem[];
     arrivals: readonly Arrival[];
     rules?: Partial<ItemRules>;
   };
+}
+
+/** A helper's boost: `bonus` extra work per second for `length` seconds every `period`. */
+export interface HelperBoost {
+  lane: Lane;
+  bonus: number;
+  /** When the first boost starts. */
+  first: number;
+  period: number;
+  length: number;
 }
 
 interface WorkerState extends Worker {
@@ -269,37 +281,60 @@ export function simulate(
   const itemUses: ItemUse[] = [];
 
   // --- Work rates ------------------------------------------------------------------------------
-  // A potion speeds up every worker of its lane for a while. Segments never overlap: a
-  // potion is not used while another runs on the same lane.
+  // A potion speeds up every worker of its lane for a while; potions never overlap on a
+  // lane, since one is not used while another runs. Helpers add their own repeating
+  // hours on top. A lane's rate at any moment is 1 plus every bonus active then.
   const boosts: Record<Lane, { from: number; to: number; bonus: number }[]> = {
     builder: [],
     lab: [],
     petHouse: [],
   };
-  /** When `amount` seconds of work started at `begin` are done, walking the boosts. */
+  const helpers: Record<Lane, HelperBoost[]> = { builder: [], lab: [], petHouse: [] };
+  for (const h of options.helpers ?? []) helpers[h.lane].push(h);
+  const bonusAt = (lane: Lane, t: number): number => {
+    let bonus = 0;
+    for (const b of boosts[lane]) if (b.from <= t && t < b.to) bonus += b.bonus;
+    for (const h of helpers[lane]) {
+      if (t < h.first) continue;
+      if ((t - h.first) % h.period < h.length) bonus += h.bonus;
+    }
+    return bonus;
+  };
+  /** The next moment after `t` at which a lane's rate can change. */
+  const nextChange = (lane: Lane, t: number): number => {
+    let next = Infinity;
+    for (const b of boosts[lane]) {
+      if (b.from > t) next = Math.min(next, b.from);
+      else if (b.to > t) next = Math.min(next, b.to);
+    }
+    for (const h of helpers[lane]) {
+      if (t < h.first) next = Math.min(next, h.first);
+      else {
+        const start = t - ((t - h.first) % h.period);
+        next = Math.min(next, t < start + h.length ? start + h.length : start + h.period);
+      }
+    }
+    return next;
+  };
+  /** When `amount` seconds of work started at `begin` are done, at the lane's rates. */
   const endFor = (begin: number, amount: number, lane: Lane): number => {
     let t = begin;
     let left = amount;
-    for (const b of boosts[lane]) {
-      if (b.to <= t) continue;
-      if (b.from > t) {
-        if (left <= b.from - t) return t + left;
-        left -= b.from - t;
-        t = b.from;
-      }
-      const rate = 1 + b.bonus;
-      if (left <= (b.to - t) * rate) return t + Math.ceil(left / rate);
-      left -= (b.to - t) * rate;
-      t = b.to;
+    for (;;) {
+      const rate = 1 + bonusAt(lane, t);
+      const next = nextChange(lane, t);
+      if (next === Infinity || left <= (next - t) * rate) return t + Math.ceil(left / rate);
+      left -= (next - t) * rate;
+      t = next;
     }
-    return t + left;
   };
   /** Work done between `begin` and `t` on a lane. */
   const doneBy = (begin: number, t: number, lane: Lane): number => {
-    let total = t - begin;
-    for (const b of boosts[lane]) {
-      const overlap = Math.min(b.to, t) - Math.max(b.from, begin);
-      if (overlap > 0) total += overlap * b.bonus;
+    let total = 0;
+    for (let at = begin; at < t; ) {
+      const next = Math.min(t, nextChange(lane, at));
+      total += (next - at) * (1 + bonusAt(lane, at));
+      at = next;
     }
     return total;
   };

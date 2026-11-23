@@ -210,3 +210,36 @@ test("a gate that needs the next hall's own work is reported as a cycle", () => 
     (e: unknown) => e instanceof CycleError && e.stepIds.includes(stepId(IDS.townHall, 0, 3)),
   );
 });
+
+test("a merged building waits for its sources and takes the most upgraded ones", () => {
+  // A made-up Twin Cannon at Town Hall 3 merges two level 4 Cannons. The fixture village
+  // has two Cannons; hall 3 allows three before the merge and one after, so a third is
+  // built and the two existing, more upgraded ones feed the merge.
+  const merging = sampleGameData((file) => {
+    file.entities.push({
+      id: 9000060,
+      name: "Twin Cannon",
+      category: "defense",
+      lane: "builder",
+      village: "home",
+      levels: [{ level: 1, cost: 1000, resource: "gold", seconds: 3600, townHall: 3 }],
+      mergeOf: [{ entityId: IDS.cannon, level: 4, count: 2 }],
+    });
+    const at3 = file.townHalls[2]!.counts;
+    at3["9000060"] = 1;
+    // Three Cannons allowed at hall 3, minus the two the merge takes.
+    at3[String(IDS.cannon)] = 1;
+  });
+  const work = remainingWork(fixtureVillage(), merging, { targetTownHall: 3 });
+  const twin = byId(work.steps).get(stepId(9000060, 0, 1))!;
+  const cannonSteps = twin.after.filter((id) => id.startsWith(`${IDS.cannon}:`));
+  assert.equal(cannonSteps.length, 2);
+  assert.deepEqual(cannonSteps.map((id) => id.split(":")[1]).sort(), ["0", "1"]);
+  assert.ok(cannonSteps.every((id) => id.endsWith(":4")));
+  assert.deepEqual(work.unplannable, []);
+  // Three Cannons are still built and maxed: one stays, two feed the merge.
+  const cannons = new Set(
+    work.steps.filter((s) => s.entityId === IDS.cannon).map((s) => s.instance),
+  );
+  assert.equal(cannons.size, 3);
+});

@@ -211,3 +211,39 @@ test("items arriving past the holding limit are reported as wasted", () => {
     ],
   );
 });
+
+test("a level 12 Lab Assistant adds 12 hours of research every 23 hours", () => {
+  // 48 h of research: 13 h in the first hour, 22 h until the next boost, 13 h in it.
+  const work = fakeWork([{ entityId: 1, seconds: 48 * H, lane: "lab", category: "troop" }]);
+  const helpers = [{ lane: "lab" as const, bonus: 12, first: T0, period: 23 * H, length: H }];
+  const plan = simulate(work, fakeVillage(1), gd, { helpers });
+  assert.equal(plan.steps[0]!.end - T0, 24 * H);
+});
+
+test("a potion and the helper stack when their hours overlap", () => {
+  // Research Potion (+23) and Lab Assistant (+12) together: 36 h in the first hour,
+  // then 12 h at the normal rate.
+  const work = fakeWork([{ entityId: 1, seconds: 48 * H, lane: "lab", category: "troop" }]);
+  const helpers = [{ lane: "lab" as const, bonus: 12, first: T0, period: 23 * H, length: H }];
+  const plan = simulate(work, fakeVillage(1), gd, {
+    ...withItems({ "research-potion": 1 }),
+    helpers,
+  });
+  assert.equal(plan.steps[0]!.end - T0, 13 * H);
+});
+
+test("helpers come from the export: Lab Assistant on the lab, Apprentice spread over builders", async () => {
+  const { helperBoosts } = await import("../boost/helpers.ts");
+  const village = {
+    ...fakeVillage(4),
+    helpers: [
+      { dataId: 93000000, level: 8, cooldownSeconds: 600 },
+      { dataId: 93000001, level: 12 },
+      { dataId: 93000002, level: 3 },
+    ],
+  };
+  assert.deepEqual(helperBoosts(village), [
+    { lane: "builder", bonus: 2, first: T0 + 600, period: 23 * H, length: H },
+    { lane: "lab", bonus: 12, first: T0, period: 23 * H, length: H },
+  ]);
+});
