@@ -10,6 +10,7 @@ import {
   type ItemRules,
   type Waste,
 } from "../boost/inventory.ts";
+import { MONTH_SECONDS, gemCost, gemsEarned, type GemSettings } from "../boost/gems.ts";
 import type { RemainingWork, Step } from "../calc/remaining.ts";
 import { blockedUntil, eventDiscounts, saleEndsAt, type EventWindow } from "../events/windows.ts";
 import type { OnlineCalendar } from "../time/online.ts";
@@ -67,7 +68,18 @@ export interface PlacedStep {
   holds?: number;
   /** The book or hammer that finished it. */
   item?: string;
+  /** Gems spent finishing it. */
+  gems?: number;
   hall?: true;
+}
+
+/** Gems spent finishing a running step. */
+export interface GemUse {
+  at: number;
+  stepId: string;
+  gems: number;
+  /** Time skipped on the step's worker. */
+  savedSeconds: number;
 }
 
 export interface ItemUse {
@@ -114,6 +126,9 @@ export interface Plan {
   itemUses: ItemUse[];
   /** Items that arrived beyond their holding limit before the finish. */
   wasted: Waste[];
+  /** Upgrades finished with gems, in time order. */
+  gemUses: GemUse[];
+  gemsSpent: number;
 }
 
 export interface SimulateOptions {
@@ -142,6 +157,12 @@ export interface SimulateOptions {
     arrivals: readonly Arrival[];
     rules?: Partial<ItemRules>;
   };
+  /**
+   * Gems to finish upgrades with. They go to running steps with at least `minDays` left
+   * that sit on what sets the finish: the lane whose work would end last, or the longest
+   * chain. Books are used before gems.
+   */
+  gems?: GemSettings;
 }
 
 /** A helper's boost: `bonus` extra work per second for `length` seconds every `period`. */
@@ -279,6 +300,9 @@ export function simulate(
   /** Work left in each placed step, in seconds at the normal rate, after discounts. */
   const workOf = new Map<string, number>();
   const itemUses: ItemUse[] = [];
+  /** Base seconds of steps not yet placed, per lane: what each lane still has to do. */
+  const unplacedLoad: Record<Lane, number> = { builder: 0, lab: 0, petHouse: 0 };
+  for (const st of work.steps) unplacedLoad[st.lane] += st.seconds;
 
   // --- Work rates ------------------------------------------------------------------------------
   // A potion speeds up every worker of its lane for a while; potions never overlap on a
@@ -392,6 +416,7 @@ export function simulate(
     };
     placed.set(s.id, p);
     workOf.set(s.id, amount);
+    unplacedLoad[s.lane] -= s.seconds;
     ready[s.lane].delete(s);
     instant.delete(s);
     if (w) {
@@ -634,6 +659,96 @@ export function simulate(
     }
   };
 
+  // --- Gems ----------------------------------------------------------------------------------
+  const gems = options.gems;
+  const gemUses: GemUse[] = [];
+  let gemsSpent = 0;
+  const gemsLeft = (t: number) =>
+    gems ? gemsEarned(gems, start, t) - gemsSpent - Math.max(0, gems.reserve) : 0;
+  /** Each lane's average work rate per worker, counting its helpers' daily hours. */
+  const avgRate: Record<Lane, number> = { builder: 1, lab: 1, petHouse: 1 };
+  for (const h of options.helpers ?? []) avgRate[h.lane] += (h.bonus * h.length) / h.period;
+  /** When each lane would finish all its work, if its workers never idled. */
+  const laneEnds = (t: number): Record<Lane, number> => {
+    const load: Record<Lane, number> = { ...unplacedLoad };
+    for (const id of running) {
+      const p = placed.get(id)!;
+      load[p.lane] += Math.max(0, workOf.get(id)! - doneBy(p.start, t, p.lane));
+    }
+    const ends = { builder: t, lab: t, petHouse: t };
+    for (const lane of LANES) {
+      const n = workers.filter(
+        (w) => w.lane === lane && w.opensAt <= t && w.closesAt === undefined,
+      ).length;
+      if (n > 0) ends[lane] = t + load[lane] / (n * avgRate[lane]);
+    }
+    return ends;
+  };
+
+  /**
+   * Finishes one running step with gems if it is on what sets the finish now: its lane's
+   * work would end last, or its chain of upgrades would. Among those, the one pressing
+   * hardest, then the longest, since a gem buys more time on a long timer.
+   */
+  const useGems = (t: number): boolean => {
+    if (!gems) return false;
+    const budget = gemsLeft(t);
+    if (budget <= 0 && gems.perMonth <= 0) return false;
+    const ends = laneEnds(t);
+    const chainEnd = (p: PlacedStep) => {
+      const s = steps.get(p.id)!;
+      return p.end + (work.tail.get(p.id) ?? s.seconds) - s.seconds;
+    };
+    let finish = Math.max(ends.builder, ends.lab, ends.petHouse);
+    for (const id of running) finish = Math.max(finish, chainEnd(placed.get(id)!));
+    for (const lane of LANES) {
+      for (const s of ready[lane])
+        finish = Math.max(finish, t + (work.tail.get(s.id) ?? s.seconds));
+    }
+    let best: { p: PlacedStep; left: number; pressure: number; cost: number } | undefined;
+    /** When the monthly gems first cover a step that is too dear now. */
+    let affordableAt = Infinity;
+    for (const id of running) {
+      const p = placed.get(id)!;
+      // Time left at the normal rate: what the game's timer shows and prices.
+      const left = Math.ceil(workOf.get(id)! - doneBy(p.start, t, p.lane));
+      if (left < gems.minDays * DAY) continue;
+      const pressure = Math.max(ends[p.lane], chainEnd(p));
+      if (pressure < finish - delta) continue;
+      const cost = gemCost(left);
+      if (cost > budget) {
+        // The price only falls as the timer runs, so by then it is affordable.
+        if (gems.perMonth > 0) {
+          const need = cost - Math.max(0, budget);
+          const at = t + Math.ceil((need * MONTH_SECONDS) / gems.perMonth);
+          if (at < p.end) affordableAt = Math.min(affordableAt, at);
+        }
+        continue;
+      }
+      if (
+        !best ||
+        pressure > best.pressure ||
+        (pressure === best.pressure &&
+          (left > best.left ||
+            (left === best.left && compareIds(steps.get(id)!, steps.get(best.p.id)!) < 0)))
+      ) {
+        best = { p, left, pressure, cost };
+      }
+    }
+    if (!best) {
+      if (affordableAt < Infinity) wakeAt(affordableAt);
+      return false;
+    }
+    const { p, cost } = best;
+    gemsSpent += cost;
+    gemUses.push({ at: t, stepId: p.id, gems: cost, savedSeconds: p.end - t });
+    p.end = t;
+    p.seconds = t - p.start;
+    p.gems = cost;
+    complete(p.id, t);
+    return true;
+  };
+
   // --- Decisions -----------------------------------------------------------------------------
   const assignBuilder = (w: WorkerState, t: number) => {
     // A Laboratory or Pet House already waiting for this upgrade gets the builder first.
@@ -704,7 +819,7 @@ export function simulate(
       wakeAt(calendar.nextOnline(calendar.nextOnline(t) + wiggle));
       return;
     }
-    // A book frees a worker, so the workers pick again until no book is used.
+    // A book or gems free a worker, so the workers pick again until neither is used.
     do {
       while (instant.size > 0) {
         for (const s of [...instant].sort(compareIds)) {
@@ -719,7 +834,7 @@ export function simulate(
           else assignSingle(w, t);
         }
       }
-    } while (useBooks(t));
+    } while (useBooks(t) || useGems(t));
     // Potions last, once every worker that can be busy is.
     usePotions(t);
   };
@@ -815,6 +930,8 @@ export function simulate(
     targetFinish,
     itemUses,
     wasted: inventory?.wasted() ?? [],
+    gemUses,
+    gemsSpent,
   };
 }
 

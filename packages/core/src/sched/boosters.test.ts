@@ -247,3 +247,78 @@ test("helpers come from the export: Lab Assistant on the lab, Apprentice spread 
     { lane: "lab", bonus: 12, first: T0, period: 23 * H, length: H },
   ]);
 });
+
+// --- Gems -----------------------------------------------------------------------------------
+const gemsOpt = (g: Partial<import("../boost/gems.ts").GemSettings>, targetFinish = 0) => ({
+  targetFinish,
+  gems: { stock: 0, perMonth: 0, reserve: 0, minDays: 1, ...g },
+});
+
+test("gems finish a critical upgrade at its start, at the game's price", () => {
+  const work = fakeWork([{ entityId: 1, seconds: 10 * D }]);
+  const plan = simulate(work, fakeVillage(1), gd, gemsOpt({ stock: 2000 }));
+  // 10 days: 1000 + 740 × 3/6 = 1370 gems.
+  assert.deepEqual(plan.gemUses, [
+    { at: T0, stepId: plan.steps[0]!.id, gems: 1370, savedSeconds: 10 * D },
+  ]);
+  assert.equal(plan.gemsSpent, 1370);
+  assert.equal(plan.finish, T0);
+  assert.equal(plan.steps[0]!.gems, 1370);
+});
+
+test("no gems below the price, inside the reserve or on short timers", () => {
+  const work = fakeWork([{ entityId: 1, seconds: 10 * D }]);
+  const v = fakeVillage(1);
+  assert.deepEqual(simulate(work, v, gd, gemsOpt({ stock: 1369 })).gemUses, []);
+  assert.deepEqual(simulate(work, v, gd, gemsOpt({ stock: 2000, reserve: 700 })).gemUses, []);
+  assert.deepEqual(simulate(work, v, gd, gemsOpt({ stock: 2000, minDays: 11 })).gemUses, []);
+});
+
+test("no gems on a lane that does not set the finish", () => {
+  // The Laboratory has 20 days of work, the builder 10: builder gems would change nothing.
+  const work = fakeWork([
+    { entityId: 1, seconds: 10 * D },
+    { entityId: 2, seconds: 20 * D, lane: "lab", category: "troop" },
+  ]);
+  const v = fakeVillage(1);
+  // 1400 gems cover the builder's 1370 at the start, but builder time is not what sets the
+  // finish. They wait until the Laboratory's 10 days left cost 1370, when the builder is done.
+  const later = simulate(work, v, gd, gemsOpt({ stock: 1400 }));
+  assert.deepEqual(
+    later.gemUses.map((u) => [u.stepId, u.gems, (u.at - T0) / D]),
+    [["2:0:1", 1370, 10]],
+  );
+  // Enough for the Laboratory: that is where they go.
+  const plan = simulate(work, v, gd, gemsOpt({ stock: 2700 }));
+  assert.deepEqual(
+    plan.gemUses.map((u) => [u.stepId, u.gems]),
+    [["2:0:1", 2603]],
+  );
+  assert.equal(plan.finish - T0, 10 * D);
+});
+
+test("monthly gems finish the upgrade once they cover its price", () => {
+  const work = fakeWork([{ entityId: 1, seconds: 10 * D }]);
+  const plan = simulate(work, fakeVillage(1), gd, gemsOpt({ perMonth: 9000 }));
+  assert.equal(plan.gemUses.length, 1);
+  const use = plan.gemUses[0]!;
+  // 1370 gems at the start take 1370/9000 of a month to earn; by then the price is lower.
+  assert.equal(use.at - T0, Math.ceil((1370 * 2_629_800) / 9000));
+  assert.ok(use.gems < 1370);
+  assert.equal(plan.finish, use.at);
+});
+
+test("gems go to the chain that sets the finish, not the longer lone step", () => {
+  // Builder 1: a 6-day step with a 6-day step after it. Builder 2: an 8-day step alone.
+  // The chain ends at 12 days and sets the finish; the lone step ends at 8.
+  const work = fakeWork(
+    [
+      { entityId: 1, seconds: 6 * D },
+      { entityId: 2, seconds: 6 * D, after: ["1:0:1"] },
+      { entityId: 3, seconds: 8 * D },
+    ],
+    2,
+  );
+  const plan = simulate(work, fakeVillage(2), gd, gemsOpt({ stock: 920 }, 12 * D));
+  assert.equal(plan.gemUses[0]?.stepId, "1:0:1");
+});

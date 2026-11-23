@@ -2,7 +2,9 @@
 // Pages are views switched by the URL hash: #start, #plan, #items, #compare, #about.
 import type { GameData, GameEvent, Lane, MagicItem } from "@max-planner/gamedata";
 import {
+  DEFAULT_GEMS,
   DEFAULT_ITEM_RULES,
+  gemCost,
   STRATEGIES,
   compareVillages,
   formatDuration,
@@ -37,6 +39,7 @@ const DEFAULTS: PlanSettings = {
   perMonth: {},
   enabled: null,
   rules: { ...DEFAULT_ITEM_RULES },
+  gems: { ...DEFAULT_GEMS },
 };
 const saved = store.settings<PlanSettings>() ?? {};
 const settings: PlanSettings = {
@@ -44,6 +47,7 @@ const settings: PlanSettings = {
   ...saved,
   offline: { ...DEFAULTS.offline, ...(saved.offline ?? {}) },
   rules: { ...DEFAULTS.rules, ...(saved.rules ?? {}) },
+  gems: { ...DEFAULTS.gems, ...(saved.gems ?? {}) },
 };
 
 type View = "start" | "plan" | "items" | "compare" | "about";
@@ -244,6 +248,13 @@ function itemsChip(r: Ok) {
     return `<a class="chip good" href="#items">Items save ${span(r.savedSeconds)}</a>`;
   return `<a class="chip" href="#items" title="With this plan, using your items does not bring the max date forward.">Items don't move the date</a>`;
 }
+function gemsChip(r: Ok) {
+  if (!r.hasGems) return "";
+  if (r.gemsSaved > 0)
+    return `<a class="chip good" href="#items">Gems save ${span(r.gemsSaved)}</a>`;
+  return `<a class="chip" href="#items" title="No upgrade on the path that sets your max date is long or cheap enough for your gems yet.">Gems don't move the date</a>`;
+}
+const gemGlyph = `<svg class="glyph" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4h10l4 5-9 11L3 9z" fill="var(--gem)" opacity=".9"/><path d="M3 9h18M9 4l3 16M15 4l-3 16" stroke="var(--surface)" stroke-width="1" fill="none" opacity=".7"/></svg>`;
 const itemName = (id: string) => items.find((i) => i.id === id)?.name ?? id;
 
 function stepName(g: GameData, p: { entityId: number; instance: number; toLevel: number }) {
@@ -406,6 +417,7 @@ function renderHeadline() {
     </div>
     <div class="chips">
       ${itemsChip(r)}
+      ${gemsChip(r)}
       <span class="chip">${plan.steps.filter((s) => s.reason !== "running").length} upgrades left</span>
       ${r.totals.walls.upgrades ? `<span class="chip">${num.format(r.totals.walls.upgrades)} wall levels, not scheduled</span>` : ""}
       <span class="chip" title="Without helpers, the Gold Pass or items, no plan could finish in under ${span(r.lowerBound.seconds)}.">Limited by ${BOTTLENECK[r.lowerBound.bottleneck] ?? "builder time"}</span>
@@ -588,12 +600,19 @@ function renderTimeline(r: Ok) {
       `<path class="use ${u.kind}" d="M${ux} 18 l5 6 -5 6 -5 -6z"><title>${esc(`${itemName(u.item)}: ${when(u.at)}, saves ${span(u.savedSeconds)}`)}</title></path>`,
     );
   }
+  for (const g of plan.gemUses) {
+    const step = plan.steps.find((s) => s.id === g.stepId);
+    const gx = x(g.at);
+    parts.push(
+      `<path class="use gem" d="M${gx} 18 l5 6 -5 6 -5 -6z"><title>${esc(`${num.format(g.gems)} gems${step ? ` on ${stepName(gd, step)}` : ""}: ${when(g.at)}, saves ${span(g.savedSeconds)}`)}</title></path>`,
+    );
+  }
   host.innerHTML = `
     <div class="timeline-bar">
       <h3>Timeline</h3>
       <div class="legend">
         <span><i class="key builder"></i>Builders</span><span><i class="key lab"></i>Laboratory</span><span><i class="key petHouse"></i>Pet House</span>
-        <span><i class="key night"></i>Offline</span><span><i class="key use"></i>Item used</span>
+        <span><i class="key night"></i>Offline</span><span><i class="key use"></i>Item used</span>${plan.gemUses.length ? `<span><i class="key gem"></i>Gems used</span>` : ""}
       </div>
       <div class="seg small" role="group" aria-label="Zoom">
         ${[1, 2, 4, 8, 16].map((z) => `<button type="button" data-action="zoom" data-value="${z}" aria-pressed="${z === state.zoom}">${z}×</button>`).join("")}
@@ -623,6 +642,7 @@ function renderDetails(r: Ok) {
       <div><dt>Ends</dt><dd>${esc(when(p.end))}</dd></div>
       <div><dt>Takes</dt><dd>${span(p.seconds)}${p.seconds !== p.baseSeconds ? ` <span class="muted">(base ${span(p.baseSeconds)})</span>` : ""}</dd></div>
       <div><dt>Costs</dt><dd>${num.format(p.cost)} ${p.resource === "darkElixir" ? "dark elixir" : p.resource}</dd></div>
+      <div><dt>${p.gems ? "Finished with" : "Gems to finish"}</dt><dd>${p.gems ? `${num.format(p.gems)} gems` : p.seconds > 0 ? `${num.format(gemCost(p.seconds))} gems <span class="muted">at the start</span>` : "—"}</dd></div>
     </dl>
     <p class="why"><strong>Why now:</strong> ${esc(REASON[p.reason])}.${p.timePcts.length ? ` Discounts: ${p.timePcts.map((x) => `${x}%`).join(" and ")}.` : ""}${item ? ` Finished early with ${esc(item.name)}.` : ""}</p>`;
 }
@@ -652,7 +672,7 @@ function renderUpcoming(r: Ok) {
             p,
           ) => `<li><button type="button" class="order-row ${state.selected === p.id ? "selected" : ""}" data-action="select" data-step="${esc(p.id)}">
         <i class="key ${p.lane}"></i>
-        <span class="order-name">${esc(stepName(gd, p))}${p.item ? ` <span class="muted small">(${esc(itemName(p.item))})</span>` : ""}</span>
+        <span class="order-name">${esc(stepName(gd, p))}${p.item ? ` <span class="muted small">(${esc(itemName(p.item))})</span>` : ""}${p.gems ? ` <span class="muted small">(${num.format(p.gems)} gems)</span>` : ""}</span>
         <span class="muted small">${esc(workerName(plan, p.worker))}</span>
         <span class="order-when">${esc(when(p.start))}</span>
         <span class="muted small order-took">${span(p.seconds)}</span>
@@ -683,6 +703,7 @@ function renderItems() {
   if (!state.text) {
     $("passes").innerHTML =
       `<div class="empty"><p>Plan a village first, then set your boosters here.</p><a class="button primary" href="#start">Paste an export</a></div>`;
+    $("gems").innerHTML = "";
     $("boosters").innerHTML = "";
     $("events").innerHTML = "";
     return;
@@ -706,8 +727,48 @@ function renderItems() {
         <p class="muted small">Otherwise it grows from 10% to 20% over each season.</p>
       </div>
     </div>`;
+  renderGems(r);
   renderBoosters(r);
   renderEvents(r);
+}
+
+function renderGems(r: Ok | null) {
+  const g = settings.gems;
+  const plan = r?.plan;
+  const uses = (plan?.gemUses ?? []).map((u) => {
+    const step = plan!.steps.find((s) => s.id === u.stepId);
+    return `<li>${gemGlyph}<span>${num.format(u.gems)} gems${step ? ` on ${esc(stepName(gd, step))}` : ""}</span><span class="muted small">${esc(day(u.at))}, skips ${span(u.savedSeconds)}</span></li>`;
+  });
+  const chip = !r
+    ? ""
+    : !r.hasGems
+      ? `<span class="chip">None set</span>`
+      : r.gemsSaved > 0
+        ? `<span class="chip good">${span(r.gemsSaved)} sooner</span>`
+        : `<span class="chip">No time saved</span>`;
+  const field = (id: string, label: string, value: number, after = "", step = 1) =>
+    `<label class="field" for="${id}">${label}${after ? `<span class="inline">` : ""}<input id="${id}" type="number" min="0" step="${step}" inputmode="decimal" value="${value}" data-bind="${id}"/>${after ? ` ${after}</span>` : ""}</label>`;
+  $("gems").innerHTML = `
+    <div class="section-head"><h3>Gems</h3>${chip}</div>
+    <p class="muted small">Gems finish upgrades on the path that sets your max date, longest first: a gem buys more time on a long timer. Finishing costs about 20 gems for an hour left, 260 for a day and 1,000 for a week.</p>
+    <div class="gem-fields">
+      ${field("gems-stock", "Gems in hand", g.stock)}
+      ${field("gems-month", "Gems you earn a month", g.perMonth)}
+      ${field("gems-reserve", "Always keep", g.reserve, "gems")}
+      ${field("gems-days", "Only on upgrades with at least", g.minDays, "days left", 0.5)}
+    </div>
+    ${r?.gemsHelp && r.gemMinDays > g.minDays ? `<p class="small">Keeping gems for timers of ${r.gemMinDays} days or more brought the date furthest forward here, so the plan does that.</p>` : ""}
+    <p class="muted small">Books and potions from the Trader often buy more time for the same gems. If you buy those, add them under Magic items instead.</p>
+    ${
+      r?.hasGems
+        ? `<h4>Planned gem spending</h4>${
+            uses.length
+              ? `<ul class="uses">${uses.slice(0, 12).join("")}</ul>${uses.length > 12 ? `<p class="muted small">and ${uses.length - 12} more</p>` : ""}<p class="small gem-total"><strong>${num.format(plan!.gemsSpent)}</strong> gems spent in all.</p>`
+              : `<p class="muted small">No upgrade on the path that sets your max date is long enough, or cheap enough for these gems.</p>`
+          }`
+        : ""
+    }
+    ${r ? `<p class="muted small gem-total">Finishing every upgrade left right now, one by one, would cost <strong>${num.format(r.gemsToFinishAll)}</strong> gems.</p>` : ""}`;
 }
 
 function stepper(kind: "stock" | "month", id: string, value: number, label: string) {
@@ -997,6 +1058,13 @@ document.addEventListener("keydown", (ev) => {
   }
 });
 
+const GEM_FIELD = {
+  "gems-stock": "stock",
+  "gems-month": "perMonth",
+  "gems-reserve": "reserve",
+  "gems-days": "minDays",
+} as const;
+
 document.addEventListener("change", (ev) => {
   const el = ev.target as HTMLInputElement;
   if (el.dataset.action === "event") {
@@ -1042,6 +1110,17 @@ document.addEventListener("change", (ev) => {
     case "save-books":
       settings.rules = { ...settings.rules, saveBooksForFullPrice: el.checked };
       break;
+    case "gems-stock":
+    case "gems-month":
+    case "gems-reserve":
+    case "gems-days": {
+      const key = GEM_FIELD[el.dataset.bind];
+      const n = Number(el.value);
+      const whole = key === "minDays" ? Math.round(n * 2) / 2 : Math.round(n);
+      const clean = Number.isFinite(whole) ? Math.max(0, whole) : 0;
+      settings.gems = { ...settings.gems, [key]: Math.min(clean, key === "minDays" ? 60 : 1e7) };
+      break;
+    }
     case "potions-auto":
       settings.rules = { ...settings.rules, potions: el.checked ? "auto" : "off" };
       break;

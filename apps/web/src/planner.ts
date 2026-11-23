@@ -7,10 +7,13 @@ import {
   goldPassDiscount,
   helperBoosts,
   parseExport,
+  gemCost,
+  hasGems as gemsSet,
   progress,
   remainingWork,
-  searchWithItems,
+  searchWithBoosts,
   type EventWindow,
+  type GemSettings,
   type ImportReport,
   type ItemRules,
   type LowerBound,
@@ -37,6 +40,7 @@ export interface PlanSettings {
   /** Switched-on events; null means the defaults (confirmed on, estimates off). */
   enabled: string[] | null;
   rules: ItemRules;
+  gems: GemSettings;
 }
 
 export interface PlanInput {
@@ -65,6 +69,15 @@ export type PlanOutput =
       itemsHelp: boolean;
       /** True when any item is in stock or expected. */
       hasItems: boolean;
+      /** How much sooner gems finish the target hall, on top of the items. Never negative. */
+      gemsSaved: number;
+      gemsHelp: boolean;
+      /** The shortest timer the winning plan spent gems on, in days. */
+      gemMinDays: number;
+      /** True when any gems are set to be spent. */
+      hasGems: boolean;
+      /** Gems to finish every upgrade left right now, one by one, at today's times. */
+      gemsToFinishAll: number;
       hash: string;
       runs: number;
       stoppedEarly: boolean;
@@ -101,13 +114,16 @@ export function planVillage(ctx: Context, input: PlanInput): PlanOutput {
     }
   }
   const hasItems = [...Object.values(s.stock), ...Object.values(s.perMonth)].some((n) => n > 0);
+  const hasGems = gemsSet(s.gems);
   const windows = expandEvents(events, from, from + YEARS, s.enabled ?? undefined);
-  const result = searchWithItems(work, village, gd, {
+  const result = searchWithBoosts(work, village, gd, {
     strategy: s.strategy,
     seed: seedOf(input.text),
     variants: 24,
     clock: () => performance.now(),
-    budgetMs: 900,
+    // Up to five searches run: plain, with items, and gems at three floors. Keep the
+    // total under about 2 s.
+    budgetMs: Math.min(900, Math.floor(1800 / (1 + (hasItems ? 1 : 0) + (hasGems ? 3 : 0)))),
     ...(calendar ? { calendar } : {}),
     ...(s.helpers ? { helpers: helperBoosts(village) } : {}),
     discounts: s.goldPass
@@ -123,19 +139,27 @@ export function planVillage(ctx: Context, input: PlanInput): PlanOutput {
         ]
       : [],
     events: windows,
-    boosters: {
-      items,
-      arrivals: arrivals(
-        { stock: s.stock, perMonth: s.perMonth },
-        seasons.seasonStartDay,
-        from,
-        from + YEARS,
-      ),
-      rules: s.rules,
-    },
+    // Without items set, the item search is skipped: it could only repeat the plain one.
+    ...(hasItems
+      ? {
+          boosters: {
+            items,
+            arrivals: arrivals(
+              { stock: s.stock, perMonth: s.perMonth },
+              seasons.seasonStartDay,
+              from,
+              from + YEARS,
+            ),
+            rules: s.rules,
+          },
+        }
+      : {}),
+    ...(hasGems ? { gems: s.gems } : {}),
   });
-  const plan = result.withItems.plan;
+  const plan = result.all.plan;
   const maxed = (p: Plan) => p.halls.at(-1)?.maxedAt ?? p.finish;
+  let gemsToFinishAll = 0;
+  for (const step of work.steps) gemsToFinishAll += gemCost(step.seconds);
   return {
     ok: true,
     village,
@@ -147,15 +171,21 @@ export function planVillage(ctx: Context, input: PlanInput): PlanOutput {
     unplannable: work.unplannable.length,
     progress: progress(village, gd, work),
     plan,
-    withoutItemsMaxedAt: maxed(result.withoutItems.plan),
-    savedSeconds: Math.max(0, maxed(result.withoutItems.plan) - maxed(plan)),
+    withoutItemsMaxedAt: maxed(result.plain.plan),
+    savedSeconds: Math.max(0, maxed(result.plain.plan) - maxed(result.items.plan)),
     itemsHelp: result.itemsHelp,
     hasItems,
-    hash: result.withItems.hash,
+    gemsSaved: Math.max(0, maxed(result.items.plan) - maxed(plan)),
+    gemsHelp: result.gemsHelp,
+    gemMinDays: result.gemMinDays,
+    hasGems,
+    gemsToFinishAll,
+    hash: result.all.hash,
     runs:
-      result.withItems.runs +
-      (result.withoutItems === result.withItems ? 0 : result.withoutItems.runs),
-    stoppedEarly: result.withItems.stoppedEarly,
+      result.plain.runs +
+      (result.items === result.plain ? 0 : result.items.runs) +
+      (result.all === result.items ? 0 : result.all.runs),
+    stoppedEarly: result.all.stoppedEarly,
     ms: Math.round(performance.now() - started),
     windows,
     offline: calendar

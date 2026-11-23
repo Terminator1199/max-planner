@@ -31,6 +31,7 @@
         --gold: #b07a12;
         --elixir: #7b45d8;
         --pet: #0e8584;
+        --gem: #c0267a;
         --good: #24774a;
         --warn: #a3520b;
         --night: rgb(23 32 43 / 0.06);
@@ -49,6 +50,7 @@
           --gold: #e2a83b;
           --elixir: #a98bff;
           --pet: #36b8b5;
+          --gem: #f06aae;
           --good: #5bc48a;
           --warn: #f0a45b;
           --night: rgb(0 0 0 / 0.28);
@@ -65,6 +67,7 @@
         --gold: #e2a83b;
         --elixir: #a98bff;
         --pet: #36b8b5;
+        --gem: #f06aae;
         --good: #5bc48a;
         --warn: #f0a45b;
         --night: rgb(0 0 0 / 0.28);
@@ -540,6 +543,9 @@
       .chart .use {
         fill: var(--ink);
       }
+      .chart .use.gem {
+        fill: var(--gem);
+      }
       .legend {
         display: flex;
         flex-wrap: wrap;
@@ -574,6 +580,10 @@
       }
       .key.use {
         background: var(--ink);
+        transform: rotate(45deg) scale(0.75);
+      }
+      .key.gem {
+        background: var(--gem);
         transform: rotate(45deg) scale(0.75);
       }
 
@@ -765,7 +775,37 @@
         }
       }
 
+      /* Gems */
+      .gem-fields {
+        display: grid;
+        gap: 12px;
+        grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+      }
+      .gem-fields input {
+        width: 100%;
+      }
+      .gem-fields .inline input {
+        width: 6.5em;
+      }
+      .gem-total {
+        font-variant-numeric: tabular-nums;
+      }
+
       /* Small fixes over the base styles */
+      .field input,
+      .field select,
+      .field textarea {
+        color: var(--ink);
+      }
+      @media (max-width: 560px) {
+        .uses li {
+          grid-template-columns: auto 1fr;
+          row-gap: 0;
+        }
+        .uses li > :last-child {
+          grid-column: 2;
+        }
+      }
       .toggle {
         flex-wrap: nowrap;
         align-items: flex-start;
@@ -1071,6 +1111,7 @@
       <section class="view" id="view-items" aria-label="Boosters">
         <div class="narrow">
           <section class="card" id="passes"></section>
+          <section class="card" id="gems"></section>
           <section class="card" id="boosters"></section>
           <section class="card" id="events"></section>
         </div>
@@ -1108,6 +1149,10 @@
               <li>
                 Magic items you have and expect each month: potions when every worker is busy, books
                 on long upgrades, hammers on long waits.
+              </li>
+              <li>
+                Gems you have and earn each month, spent finishing upgrades on the path that sets
+                your max date, at the game's price of time.
               </li>
               <li>The hours you are offline: nothing starts while you sleep.</li>
             </ul>

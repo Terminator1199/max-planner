@@ -3,6 +3,7 @@
 import type { GameData } from "@max-planner/gamedata";
 import type { RemainingWork } from "../calc/remaining.ts";
 import type { Village } from "../types.ts";
+import { hasGems } from "../boost/gems.ts";
 import { sha256 } from "../util/sha256.ts";
 import { mulberry32 } from "./prng.ts";
 import { simulate, type Plan, type SimulateOptions } from "./simulate.ts";
@@ -195,11 +196,32 @@ export interface ItemSavings {
 }
 
 /**
- * Every plan runs twice, with items and without, so the page can show both dates. The item
- * search also replays the no-item winner with items, so items are judged on the same order
- * rather than on two searches' luck. A plan with items is never reported slower than the
- * plan without them: if items cannot bring the finish forward, the plan without them stands
- * and `itemsHelp` is false.
+ * Searches with `options` on top of `base`, replaying base's winner so the extra boosts are
+ * judged on the same order rather than on two searches' luck. The result is never slower
+ * than `base`: if nothing beats it, `base` stands and `helps` is false. With `strict`, the
+ * result must finish sooner, as gems cost the player something.
+ */
+function improveOn(
+  base: SearchResult,
+  work: RemainingWork,
+  village: Village,
+  gd: GameData,
+  options: SearchOptions,
+  strict = false,
+): { result: SearchResult; helps: boolean } {
+  const tried = searchPlan(work, village, gd, {
+    ...options,
+    alsoTry: [...(options.alsoTry ?? []), base.params],
+  });
+  const helps = strict ? tried.plan.finish < base.plan.finish : !betterPlan(base.plan, tried.plan);
+  return { result: helps ? tried : base, helps };
+}
+
+/**
+ * Every plan runs twice, with items and without, so the page can show both dates. A plan
+ * with items is never reported slower than the plan without them: if items cannot bring
+ * the finish forward, the plan without them stands and `itemsHelp` is false. Gems in the
+ * options are left out of both.
  */
 export function searchWithItems(
   work: RemainingWork,
@@ -207,20 +229,93 @@ export function searchWithItems(
   gd: GameData,
   options: SearchOptions = {},
 ): ItemSavings {
-  const { boosters, ...rest } = options;
+  const { boosters, gems: _gems, ...rest } = options;
   const withoutItems = searchPlan(work, village, gd, rest);
   if (!boosters)
     return { withItems: withoutItems, withoutItems, savedSeconds: 0, itemsHelp: false };
-  const tried = searchPlan(work, village, gd, {
-    ...options,
-    alsoTry: [...(options.alsoTry ?? []), withoutItems.params],
+  const { result: withItems, helps } = improveOn(withoutItems, work, village, gd, {
+    ...rest,
+    boosters,
   });
-  const itemsHelp = !betterPlan(withoutItems.plan, tried.plan);
-  const withItems = itemsHelp ? tried : withoutItems;
   return {
     withItems,
     withoutItems,
     savedSeconds: withoutItems.plan.finish - withItems.plan.finish,
-    itemsHelp,
+    itemsHelp: helps,
+  };
+}
+
+export interface BoostSavings {
+  /** No items and no gems. */
+  plain: SearchResult;
+  /** Items only: `plain` again when there are none or they cannot help. */
+  items: SearchResult;
+  /** Items and gems: `items` again when there are no gems or they cannot help. */
+  all: SearchResult;
+  /** How much sooner `items` finishes than `plain`. Never negative. */
+  itemsSaved: number;
+  /** How much sooner `all` finishes than `items`. Never negative. */
+  gemsSaved: number;
+  itemsHelp: boolean;
+  gemsHelp: boolean;
+  /** The shortest timer gems went to in the winning plan's rule, in days. */
+  gemMinDays: number;
+}
+
+/** Days-left floors tried for gems: the player's own, then longer ones. */
+const GEM_FLOORS = [3, 7];
+
+/**
+ * Three searches, each building on the last: no boosts, then items, then items and gems,
+ * so the page can say what the items and the gems each bring. A search is skipped when its
+ * boost is not set. Gems are only spent when they bring the finish forward, and the gem
+ * search also tries keeping gems for longer timers, where a gem buys more time: one floor
+ * suits one village and not another, so each is tried and the soonest finish wins.
+ */
+export function searchWithBoosts(
+  work: RemainingWork,
+  village: Village,
+  gd: GameData,
+  options: SearchOptions = {},
+): BoostSavings {
+  const { boosters, gems, ...rest } = options;
+  const plain = searchPlan(work, village, gd, rest);
+  const withItems = boosters
+    ? improveOn(plain, work, village, gd, { ...rest, boosters })
+    : { result: plain, helps: false };
+  const items = withItems.result;
+  let all = items;
+  let gemsHelp = false;
+  let gemMinDays = gems?.minDays ?? 0;
+  if (gems && hasGems(gems)) {
+    const floors = [
+      ...new Set([gems.minDays, ...GEM_FLOORS.map((f) => Math.max(gems.minDays, f))]),
+    ];
+    const variants = Math.max(4, Math.ceil((rest.variants ?? 64) / floors.length));
+    for (const minDays of floors) {
+      const tried = improveOn(
+        items,
+        work,
+        village,
+        gd,
+        { ...rest, variants, ...(boosters ? { boosters } : {}), gems: { ...gems, minDays } },
+        true,
+      );
+      if (tried.helps && betterPlan(tried.result.plan, all.plan)) {
+        all = tried.result;
+        gemsHelp = true;
+        gemMinDays = minDays;
+      }
+    }
+  }
+  return {
+    plain,
+    items,
+    all,
+    itemsSaved: plain.plan.finish - items.plan.finish,
+    gemsSaved: items.plan.finish - all.plan.finish,
+    itemsHelp: withItems.helps,
+    gemsHelp,
+    gemMinDays,
   };
 }
