@@ -16,6 +16,9 @@ export type WarningCode =
   | "crafted_excluded"
   | "weapon_excluded";
 
+/** Left out of the game data, but named in the import report. */
+const CRAFTING_STATION = 1000097;
+
 export interface ImportWarning {
   code: WarningCode;
   section?: string;
@@ -138,7 +141,7 @@ export function parseExport(text: string, gd: GameData, options: ParseOptions = 
           code: "crafted_excluded",
           section: key,
           entityId: id,
-          message: `${gd.entity(id)?.name ?? `Building ${id}`}: crafted defense modules are not planned yet.`,
+          message: `${gd.entity(id)?.name ?? (id === CRAFTING_STATION ? "Crafting Station" : `Building ${id}`)}: crafted defense modules are not planned yet.`,
         });
         return;
       }

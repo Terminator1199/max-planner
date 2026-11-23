@@ -30,8 +30,9 @@ What the build does, beyond renaming fields:
   Town Hall 18 exports exactly. The Eagle Artillery is consumed by the Town Hall 17 upgrade, which
   is a gate on that hall.
 - B.O.B's Hut has the `extraBuilder` role: it adds a home builder but is earned in the Builder Base.
-- Left out: Builder Base, super and event troops and spells (not researched), squads (not in the
-  export), the Crafting Station's modules, guardians, hero equipment and supercharges.
+- Left out: Builder Base, super and event troops and spells (not researched), the Crafting
+  Station's modules, guardians, hero equipment and supercharges.
+- Squads are researched in the Laboratory like troops, unlocked by the Squad Barracks.
 - ClashKing has no storage capacities, so `storage` is empty and no step waits on a storage.
 
 `fixtures/gamedata/sample.json` stays for tests: small, hand-made, `"synthetic": true`.

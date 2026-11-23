@@ -87,6 +87,7 @@ const PRODUCTION: Record<string, number> = {
   "Dark Spell Factory": 1000029,
   "Hero Hall": 1000071,
   "Pet House": 1000068,
+  "Squad Barracks": 1000106,
 };
 
 export function normalise(
@@ -203,12 +204,8 @@ export function normalise(
       if (!home(item)) continue;
       const paid = item.levels.some((l) => (l.upgrade_cost ?? 0) > 0 || (l.upgrade_time ?? 0) > 0);
       const producer = PRODUCTION[item.production_building ?? ""];
-      // Squads have research data, but no export lists them (checked on Town Hall 8 to
-      // 18 exports from November 2026), so planning them would add work no player sees.
-      if (item.production_building === "Squad Barracks") {
-        skipped.push({ id: item._id, name: item.name, reason: "Squads are not in the export." });
-        continue;
-      }
+      // Squads are researched like troops once unlocked in the Squad Barracks; exports
+      // list the ones a player has (seen on a Town Hall 16 export, November 2026).
       if (!paid || (lane !== "builder" && lane !== "petHouse" && !item.production_building_level)) {
         skipped.push({
           id: item._id,

@@ -2300,6 +2300,222 @@
       ]
     },
     {
+      "id": 4000195,
+      "name": "Barch Squad",
+      "category": "troop",
+      "lane": "lab",
+      "village": "home",
+      "levels": [
+        { "level": 1, "cost": 0, "resource": "elixir", "seconds": 0, "townHall": 8 },
+        { "level": 2, "cost": 23500000, "resource": "elixir", "seconds": 950400, "townHall": 19 },
+        { "level": 3, "cost": 32500000, "resource": "elixir", "seconds": 1339200, "townHall": 19 }
+      ],
+      "requires": [
+        { "entityId": 1000007, "level": 17, "forLevel": 2 },
+        { "entityId": 1000007, "level": 17, "forLevel": 3 },
+        { "entityId": 1000106, "level": 1, "forLevel": 1 }
+      ]
+    },
+    {
+      "id": 4000196,
+      "name": "Giant Wizard Squad",
+      "category": "troop",
+      "lane": "lab",
+      "village": "home",
+      "levels": [
+        { "level": 1, "cost": 0, "resource": "elixir", "seconds": 0, "townHall": 9 },
+        { "level": 2, "cost": 25000000, "resource": "elixir", "seconds": 1036800, "townHall": 19 },
+        { "level": 3, "cost": 32500000, "resource": "elixir", "seconds": 1382400, "townHall": 19 }
+      ],
+      "requires": [
+        { "entityId": 1000007, "level": 17, "forLevel": 2 },
+        { "entityId": 1000007, "level": 17, "forLevel": 3 },
+        { "entityId": 1000106, "level": 2, "forLevel": 1 }
+      ]
+    },
+    {
+      "id": 4000197,
+      "name": "Wall Breaker Squad",
+      "category": "troop",
+      "lane": "lab",
+      "village": "home",
+      "levels": [
+        { "level": 1, "cost": 0, "resource": "elixir", "seconds": 0, "townHall": 10 },
+        { "level": 2, "cost": 23000000, "resource": "elixir", "seconds": 907200, "townHall": 19 },
+        { "level": 3, "cost": 30500000, "resource": "elixir", "seconds": 1209600, "townHall": 19 }
+      ],
+      "requires": [
+        { "entityId": 1000007, "level": 17, "forLevel": 2 },
+        { "entityId": 1000007, "level": 17, "forLevel": 3 },
+        { "entityId": 1000106, "level": 3, "forLevel": 1 }
+      ]
+    },
+    {
+      "id": 4000198,
+      "name": "Minion Squad",
+      "category": "troop",
+      "lane": "lab",
+      "village": "home",
+      "levels": [
+        { "level": 1, "cost": 0, "resource": "darkElixir", "seconds": 0, "townHall": 11 },
+        { "level": 2, "cost": 370000, "resource": "darkElixir", "seconds": 993600, "townHall": 19 },
+        { "level": 3, "cost": 465000, "resource": "darkElixir", "seconds": 1209600, "townHall": 19 }
+      ],
+      "requires": [
+        { "entityId": 1000007, "level": 17, "forLevel": 2 },
+        { "entityId": 1000007, "level": 17, "forLevel": 3 },
+        { "entityId": 1000106, "level": 4, "forLevel": 1 }
+      ]
+    },
+    {
+      "id": 4000199,
+      "name": "Balloon Squad",
+      "category": "troop",
+      "lane": "lab",
+      "village": "home",
+      "levels": [
+        { "level": 1, "cost": 0, "resource": "elixir", "seconds": 0, "townHall": 12 },
+        { "level": 2, "cost": 28500000, "resource": "elixir", "seconds": 1166400, "townHall": 19 },
+        { "level": 3, "cost": 32000000, "resource": "elixir", "seconds": 1339200, "townHall": 19 }
+      ],
+      "requires": [
+        { "entityId": 1000007, "level": 17, "forLevel": 2 },
+        { "entityId": 1000007, "level": 17, "forLevel": 3 },
+        { "entityId": 1000106, "level": 5, "forLevel": 1 }
+      ]
+    },
+    {
+      "id": 4000200,
+      "name": "Golem Witch Squad",
+      "category": "troop",
+      "lane": "lab",
+      "village": "home",
+      "levels": [
+        { "level": 1, "cost": 0, "resource": "darkElixir", "seconds": 0, "townHall": 13 },
+        {
+          "level": 2,
+          "cost": 420000,
+          "resource": "darkElixir",
+          "seconds": 1123200,
+          "townHall": 19
+        },
+        { "level": 3, "cost": 500000, "resource": "darkElixir", "seconds": 1382400, "townHall": 19 }
+      ],
+      "requires": [
+        { "entityId": 1000007, "level": 17, "forLevel": 2 },
+        { "entityId": 1000007, "level": 17, "forLevel": 3 },
+        { "entityId": 1000106, "level": 6, "forLevel": 1 }
+      ]
+    },
+    {
+      "id": 4000201,
+      "name": "Hog Rider Squad",
+      "category": "troop",
+      "lane": "lab",
+      "village": "home",
+      "levels": [
+        { "level": 1, "cost": 0, "resource": "darkElixir", "seconds": 0, "townHall": 14 },
+        {
+          "level": 2,
+          "cost": 415000,
+          "resource": "darkElixir",
+          "seconds": 1080000,
+          "townHall": 19
+        },
+        { "level": 3, "cost": 480000, "resource": "darkElixir", "seconds": 1296000, "townHall": 19 }
+      ],
+      "requires": [
+        { "entityId": 1000007, "level": 17, "forLevel": 2 },
+        { "entityId": 1000007, "level": 17, "forLevel": 3 },
+        { "entityId": 1000106, "level": 7, "forLevel": 1 }
+      ]
+    },
+    {
+      "id": 4000202,
+      "name": "Miner Squad",
+      "category": "troop",
+      "lane": "lab",
+      "village": "home",
+      "levels": [
+        { "level": 1, "cost": 0, "resource": "elixir", "seconds": 0, "townHall": 15 },
+        { "level": 2, "cost": 21000000, "resource": "elixir", "seconds": 864000, "townHall": 19 },
+        { "level": 3, "cost": 30500000, "resource": "elixir", "seconds": 1166400, "townHall": 19 }
+      ],
+      "requires": [
+        { "entityId": 1000007, "level": 17, "forLevel": 2 },
+        { "entityId": 1000007, "level": 17, "forLevel": 3 },
+        { "entityId": 1000106, "level": 8, "forLevel": 1 }
+      ]
+    },
+    {
+      "id": 4000203,
+      "name": "Healer Squad",
+      "category": "troop",
+      "lane": "lab",
+      "village": "home",
+      "levels": [
+        { "level": 1, "cost": 0, "resource": "elixir", "seconds": 0, "townHall": 16 },
+        { "level": 2, "cost": 29000000, "resource": "elixir", "seconds": 1188000, "townHall": 19 },
+        { "level": 3, "cost": 32000000, "resource": "elixir", "seconds": 1360800, "townHall": 19 }
+      ],
+      "requires": [
+        { "entityId": 1000007, "level": 17, "forLevel": 2 },
+        { "entityId": 1000007, "level": 17, "forLevel": 3 },
+        { "entityId": 1000106, "level": 9, "forLevel": 1 }
+      ]
+    },
+    {
+      "id": 4000204,
+      "name": "P.E.K.K.A Titan Squad",
+      "category": "troop",
+      "lane": "lab",
+      "village": "home",
+      "levels": [
+        { "level": 1, "cost": 0, "resource": "elixir", "seconds": 0, "townHall": 17 },
+        { "level": 2, "cost": 28000000, "resource": "elixir", "seconds": 1144800, "townHall": 19 },
+        { "level": 3, "cost": 32000000, "resource": "elixir", "seconds": 1317600, "townHall": 19 }
+      ],
+      "requires": [
+        { "entityId": 1000007, "level": 17, "forLevel": 2 },
+        { "entityId": 1000007, "level": 17, "forLevel": 3 },
+        { "entityId": 1000106, "level": 10, "forLevel": 1 }
+      ]
+    },
+    {
+      "id": 4000205,
+      "name": "Dragons Squad",
+      "category": "troop",
+      "lane": "lab",
+      "village": "home",
+      "levels": [
+        { "level": 1, "cost": 0, "resource": "elixir", "seconds": 0, "townHall": 18 },
+        { "level": 2, "cost": 29500000, "resource": "elixir", "seconds": 1209600, "townHall": 19 },
+        { "level": 3, "cost": 32000000, "resource": "elixir", "seconds": 1382400, "townHall": 19 }
+      ],
+      "requires": [
+        { "entityId": 1000007, "level": 17, "forLevel": 2 },
+        { "entityId": 1000007, "level": 17, "forLevel": 3 },
+        { "entityId": 1000106, "level": 11, "forLevel": 1 }
+      ]
+    },
+    {
+      "id": 4000206,
+      "name": "Baby Dragon Squad",
+      "category": "troop",
+      "lane": "lab",
+      "village": "home",
+      "levels": [
+        { "level": 1, "cost": 0, "resource": "elixir", "seconds": 0, "townHall": 19 },
+        { "level": 2, "cost": 27500000, "resource": "elixir", "seconds": 1123200, "townHall": 19 },
+        { "level": 3, "cost": 32000000, "resource": "elixir", "seconds": 1296000, "townHall": 19 }
+      ],
+      "requires": [
+        { "entityId": 1000007, "level": 17, "forLevel": 2 },
+        { "entityId": 1000007, "level": 17, "forLevel": 3 },
+        { "entityId": 1000106, "level": 12, "forLevel": 1 }
+      ]
+    },
+    {
       "id": 12000000,
       "name": "Bomb",
       "category": "trap",
@@ -6350,6 +6566,7 @@
         "4000011": 1,
         "4000012": 1,
         "4000013": 1,
+        "4000195": 1,
         "12000000": 6,
         "12000001": 6,
         "12000002": 3,
@@ -6413,6 +6630,8 @@
         "4000015": 1,
         "4000017": 1,
         "4000023": 1,
+        "4000195": 1,
+        "4000196": 1,
         "12000000": 6,
         "12000001": 6,
         "12000002": 4,
@@ -6484,6 +6703,9 @@
         "4000022": 1,
         "4000023": 1,
         "4000024": 1,
+        "4000195": 1,
+        "4000196": 1,
+        "4000197": 1,
         "12000000": 6,
         "12000001": 6,
         "12000002": 5,
@@ -6560,6 +6782,10 @@
         "4000024": 1,
         "4000058": 1,
         "4000059": 1,
+        "4000195": 1,
+        "4000196": 1,
+        "4000197": 1,
+        "4000198": 1,
         "12000000": 6,
         "12000001": 6,
         "12000002": 5,
@@ -6645,6 +6871,11 @@
         "4000059": 1,
         "4000062": 1,
         "4000082": 1,
+        "4000195": 1,
+        "4000196": 1,
+        "4000197": 1,
+        "4000198": 1,
+        "4000199": 1,
         "12000000": 6,
         "12000001": 8,
         "12000002": 6,
@@ -6736,6 +6967,12 @@
         "4000082": 1,
         "4000087": 1,
         "4000097": 1,
+        "4000195": 1,
+        "4000196": 1,
+        "4000197": 1,
+        "4000198": 1,
+        "4000199": 1,
+        "4000200": 1,
         "12000000": 7,
         "12000001": 9,
         "12000002": 6,
@@ -6833,6 +7070,13 @@
         "4000095": 1,
         "4000097": 1,
         "4000123": 1,
+        "4000195": 1,
+        "4000196": 1,
+        "4000197": 1,
+        "4000198": 1,
+        "4000199": 1,
+        "4000200": 1,
+        "4000201": 1,
         "12000000": 8,
         "12000001": 9,
         "12000002": 7,
@@ -6940,6 +7184,14 @@
         "4000110": 1,
         "4000123": 1,
         "4000150": 1,
+        "4000195": 1,
+        "4000196": 1,
+        "4000197": 1,
+        "4000198": 1,
+        "4000199": 1,
+        "4000200": 1,
+        "4000201": 1,
+        "4000202": 1,
         "12000000": 8,
         "12000001": 9,
         "12000002": 7,
@@ -7059,6 +7311,15 @@
         "4000132": 1,
         "4000135": 1,
         "4000150": 1,
+        "4000195": 1,
+        "4000196": 1,
+        "4000197": 1,
+        "4000198": 1,
+        "4000199": 1,
+        "4000200": 1,
+        "4000201": 1,
+        "4000202": 1,
+        "4000203": 1,
         "12000000": 8,
         "12000001": 9,
         "12000002": 7,
@@ -7186,6 +7447,16 @@
         "4000150": 1,
         "4000177": 1,
         "4000188": 1,
+        "4000195": 1,
+        "4000196": 1,
+        "4000197": 1,
+        "4000198": 1,
+        "4000199": 1,
+        "4000200": 1,
+        "4000201": 1,
+        "4000202": 1,
+        "4000203": 1,
+        "4000204": 1,
         "12000000": 8,
         "12000001": 9,
         "12000002": 8,
@@ -7317,6 +7588,17 @@
         "4000150": 1,
         "4000177": 1,
         "4000188": 1,
+        "4000195": 1,
+        "4000196": 1,
+        "4000197": 1,
+        "4000198": 1,
+        "4000199": 1,
+        "4000200": 1,
+        "4000201": 1,
+        "4000202": 1,
+        "4000203": 1,
+        "4000204": 1,
+        "4000205": 1,
         "12000000": 8,
         "12000001": 9,
         "12000002": 8,
@@ -7452,6 +7734,18 @@
         "4000150": 1,
         "4000177": 1,
         "4000188": 1,
+        "4000195": 1,
+        "4000196": 1,
+        "4000197": 1,
+        "4000198": 1,
+        "4000199": 1,
+        "4000200": 1,
+        "4000201": 1,
+        "4000202": 1,
+        "4000203": 1,
+        "4000204": 1,
+        "4000205": 1,
+        "4000206": 1,
         "12000000": 8,
         "12000001": 10,
         "12000002": 8,
