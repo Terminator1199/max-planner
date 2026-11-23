@@ -183,3 +183,28 @@ test("fails clearly on empty, non-JSON, wrong shape and missing Town Hall", () =
   assert.equal(code(JSON.stringify({ tag: "#A" })), "missing_field");
   assert.equal(code(exportText([{ data: IDS.cannon, lvl: 1 }])), "no_town_hall");
 });
+
+test("an export shaped like the real ones reads with nothing unknown", () => {
+  // fixtures/exports/real-shape.json copies the structure of nine public exports
+  // (Town Hall 8 to 18): every section and row field they use, on sample ids.
+  const result = parseExport(readFixture("real-shape.json"), sampleGameData(), {
+    now: 1_795_000_000,
+  });
+  assert.ok(result.ok);
+  const { report, village } = result;
+  assert.deepEqual(
+    report.sections.filter((s) => s.use === "unknown" || !s.confirmed),
+    [],
+  );
+  assert.deepEqual(report.unknownFields, []);
+  assert.deepEqual(report.warnings.map((w) => w.code).sort(), [
+    "crafted_excluded",
+    "gear_up_ignored",
+    "supercharge_excluded",
+    "weapon_excluded",
+  ]);
+  // An upgrade marked "extra" runs alongside the others.
+  const running = village.instances.filter((i) => i.finishesAt !== undefined);
+  assert.deepEqual(running.map((i) => i.entityId).sort(), [9000003, 9000010, 9000020, 9000030]);
+  assert.equal(village.helpers.length, 4);
+});
